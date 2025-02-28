@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +18,8 @@ import 'package:vrc_avatar_manager/tag_edit_dialog.dart';
 import 'package:vrc_avatar_manager/vrc_api.dart';
 import 'package:vrc_avatar_manager/vrc_icons.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
+import 'dart:typed_data';
+import 'package:udp/udp.dart';
 
 class AvatarsPage extends StatefulWidget {
   const AvatarsPage({super.key, required this.accountId});
@@ -225,7 +229,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
   Future<void> _changeAvatar(String id) async {
     if (_confirmWhenChangeAvatar) {
       var avatar = _avatars.firstWhereOrNull((avatar) => avatar.id == id);
-      var confirmed = await showDialog<bool>(
+      var selectedOption = await showDialog<String>(
           context: context,
           builder: (context) {
             return AlertDialog(
@@ -242,22 +246,34 @@ class _AvatarsPageState extends State<AvatarsPage> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop(true);
+                      Navigator.of(context).pop("WEB"); // "WEB" を返す
                     },
-                    child: const Text("Yes")),
+                    child: const Text("WEB")),
+                ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop("OSC"); // "OSC" を返す
+                    },
+                    child: const Text("OSC")),
                 ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop(false);
                     },
-                    child: const Text("No")),
+                    child: const Text("Cancel")),
               ],
             );
           });
-      if (confirmed != true) {
-        return;
+      if (selectedOption == "WEB") {
+        await _doChangeAvatar(id); // WEB用の処理
+      } else if (selectedOption == "OSC") {
+        await _doChangeAvatarOSC(id); // OSC用の処理
       }
     }
-    await _doChangeAvatar(id);
+
+    return;
   }
 
   Future<void> _doChangeAvatar(String id) async {
@@ -268,6 +284,43 @@ class _AvatarsPageState extends State<AvatarsPage> {
       _showError("Avatar change failed!");
       print(res.failure);
     }
+  }
+
+Future<void> _doChangeAvatarOSC(String id) async {
+    const String vrchatOscAddress = "127.0.0.1";
+    const int vrchatOscPort = 9000;
+    const String oscPath = "/avatar/change";
+
+    // OSCメッセージのフォーマット（"/avatar/change" + id のOSCパケット）
+    List<int> messageBytes = _buildOscMessage(oscPath, id);
+
+    // UDPソケットを作成して送信
+    UDP sender = await UDP.bind(Endpoint.any());
+    await sender.send(
+        Uint8List.fromList(messageBytes),
+        Endpoint.unicast(InternetAddress(vrchatOscAddress),
+            port: Port(vrchatOscPort)));
+
+    print("Sent OSC message to VRChat: $oscPath $id");
+
+    sender.close();
+  }
+
+    // OSCメッセージのフォーマットを作成する関数
+  List<int> _buildOscMessage(String address, String argument) {
+    List<int> addressBytes = _oscStringToBytes(address);
+    List<int> typeTagBytes = _oscStringToBytes(",s"); // OSCの型タグ（文字列: "s"）
+    List<int> argumentBytes = _oscStringToBytes(argument);
+    return [...addressBytes, ...typeTagBytes, ...argumentBytes];
+  }
+
+// OSCの文字列をバイト配列に変換する関数（Null文字で終端し、4バイト区切り）
+  List<int> _oscStringToBytes(String value) {
+    List<int> bytes = value.codeUnits + [0]; // 文字列にNull終端を追加
+    while (bytes.length % 4 != 0) {
+      bytes.add(0); // 4バイト境界に揃える
+    }
+    return bytes;
   }
 
   void _toggleTagAvatar(String id) async {

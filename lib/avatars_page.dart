@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vrc_avatar_manager/avatar_view.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/clickable_view.dart';
@@ -18,7 +19,6 @@ import 'package:vrc_avatar_manager/tag_edit_dialog.dart';
 import 'package:vrc_avatar_manager/vrc_api.dart';
 import 'package:vrc_avatar_manager/vrc_icons.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
-import 'dart:typed_data';
 import 'package:udp/udp.dart';
 
 class AvatarsPage extends StatefulWidget {
@@ -226,54 +226,86 @@ class _AvatarsPageState extends State<AvatarsPage> {
     }
   }
 
+  bool _useOSC = false; // OSC使用フラグ
+
+  AvatarChanger() {
+    _loadSettings(); // 設定をロード
+  }
+
+  Future<void> _loadSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _useOSC = prefs.getBool("useOSC") ?? false; // デフォルトは false
+  }
+
+  Future<void> _saveSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("useOSC", _useOSC);
+  }
+
   Future<void> _changeAvatar(String id) async {
     if (_confirmWhenChangeAvatar) {
       var avatar = _avatars.firstWhereOrNull((avatar) => avatar.id == id);
-      var selectedOption = await showDialog<String>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text("アバター変更"),
-              content: avatar == null
-                  ? const Text("?")
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [AvatarView(avatar: avatar, detailed: true)]),
-              actions: [
-                ElevatedButton(
+      var confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          bool tempUseOSC = _useOSC; // ダイアログ内での一時変数
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text("アバター変更"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min, // コンパクトなレイアウト
+                  children: [
+                    if (avatar != null)
+                      AvatarView(avatar: avatar, detailed: true),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: tempUseOSC,
+                          onChanged: (value) {
+                            setState(() => tempUseOSC = value ?? false);
+                          },
+                        ),
+                        const Text("OSCを使用する"),
+                      ],
+                    ),
+                  ],
+                ),
+                actions: [
+                  ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop("WEB"); // "WEB" を返す
+                      _useOSC = tempUseOSC; // 設定を反映
+                      _saveSettings(); // 設定を保存
+                      Navigator.of(context).pop(true);
                     },
-                    child: const Text("WEB")),
-                ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop("OSC"); // "OSC" を返す
-                    },
-                    child: const Text("OSC")),
-                ElevatedButton(
+                    child: const Text("Yes"),
+                  ),
+                  ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop(false);
                     },
-                    child: const Text("Cancel")),
-              ],
-            );
-          });
-      if (selectedOption == "WEB") {
-        await _doChangeAvatar(id); // WEB用の処理
-      } else if (selectedOption == "OSC") {
-        await _doChangeAvatarOSC(id); // OSC用の処理
-      }
+                    child: const Text("No"),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      if (confirmed != true) return;
     }
 
-    return;
+    if (_useOSC) {
+      await _doChangeAvatarOSC(id);
+    } else {
+      await _doChangeAvatar(id);
+    }
   }
 
   Future<void> _doChangeAvatar(String id) async {
@@ -286,7 +318,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
     }
   }
 
-Future<void> _doChangeAvatarOSC(String id) async {
+  Future<void> _doChangeAvatarOSC(String id) async {
     const String vrchatOscAddress = "127.0.0.1";
     const int vrchatOscPort = 9000;
     const String oscPath = "/avatar/change";
@@ -306,7 +338,7 @@ Future<void> _doChangeAvatarOSC(String id) async {
     sender.close();
   }
 
-    // OSCメッセージのフォーマットを作成する関数
+  // OSCメッセージのフォーマットを作成する関数
   List<int> _buildOscMessage(String address, String argument) {
     List<int> addressBytes = _oscStringToBytes(address);
     List<int> typeTagBytes = _oscStringToBytes(",s"); // OSCの型タグ（文字列: "s"）

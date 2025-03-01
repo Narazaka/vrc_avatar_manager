@@ -54,6 +54,9 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   shared_preferences: ^2.3.3
   flutter_colorpicker: ^1.1.0
+  window_manager: ^0.4.3
+  auto_updater: ^1.0.0
+  filesize: ^2.0.1
   udp: ^5.0.3
 
 dev_dependencies:

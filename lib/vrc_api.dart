@@ -3,6 +3,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dio_response_validator/dio_response_validator.dart';
 import 'package:vrc_avatar_manager/app_dir.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
+import 'package:dio/dio.dart';
 
 class VrcApi {
   const VrcApi({required this.accountId, required this.vrchatDart});
@@ -96,5 +97,55 @@ class VrcApi {
         .getAvatarsApi()
         .selectAvatar(avatarId: id)
         .validateVrc();
+  }
+
+  Future<Avatar?> avatar(String id) async {
+    final res = await vrchatDart.rawApi
+        .getAvatarsApi()
+        .getAvatar(avatarId: id)
+        .validateVrc();
+    if (res.succeeded) {
+      return res.success!.data;
+    }
+    print(res.failure.toString());
+    return null;
+  }
+
+  Future<int?> fileSize(String url) async {
+    final options = Options(
+      method: r'GET',
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'authCookie',
+            'keyName': 'auth',
+            'where': '',
+          },
+        ],
+      },
+    );
+    try {
+      final res = await vrchatDart.rawApi.dio.head(url, options: options);
+      if (res.statusCode != 200) {
+        print("file head error: ${res.statusCode} ${res.statusMessage}");
+        return null;
+      }
+      final lenStr = res.headers.value("content-length");
+      if (lenStr == null) {
+        print("file head error: no content-length");
+        return null;
+      }
+      final len = int.tryParse(lenStr);
+      if (len == null) {
+        print("file head error: invalid content-length");
+        return null;
+      }
+      return len;
+    } catch (e) {
+      print("file head dio error: $e");
+      print(url);
+      return null;
+    }
   }
 }

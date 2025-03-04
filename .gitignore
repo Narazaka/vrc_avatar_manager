@@ -45,3 +45,5 @@ app.*.map.json
 .cookie
 .db
 /Output
+/dsa_priv.pem
+/dist

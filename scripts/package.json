@@ -1,0 +1,16 @@
+{
+  "name": "scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen": "tsx ./gen.ts"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "xmlbuilder2": "^3.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.3"
+  }
+}

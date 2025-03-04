@@ -8,10 +8,15 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: windows-latest
+
+    outputs:
+      sig: ${{ steps.auto_updater_sign.outputs.sig }}
 
     steps:
       - name: Clone repository
@@ -36,6 +41,15 @@ jobs:
         with:
           path: setup.iss
 
+      - name: Sign auto updater signature
+        id: auto_updater_sign
+        run: |
+          echo "${{ secrets.DSA_PRIV }}" > dsa_priv.pem
+          dart run auto_updater:sign_update Output/vrc_avatar_manager-${{ github.ref_name }}.0-installer.exe > sig
+          echo "sig='$(cat sig)'" >> $env:GITHUB_OUTPUT
+          rm sig
+          rm dsa_priv.pem
+
       - name: mv dist
         run: mv build\windows\x64\runner\Release\ vrc_avatar_manager-${{ github.ref_name }}
 
@@ -52,10 +66,53 @@ jobs:
       - run: dart run msix:pack
 
       - name: Make Release
-        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: |
             Output/vrc_avatar_manager-${{ github.ref_name }}.0-installer.exe
             vrc_avatar_manager-${{ github.ref_name }}.zip
             build/windows/x64/runner/Release/vrc_avatar_manager.msix
+
+  build-appcast-feed:
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v3 # check out this repo
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: npm ci
+        working-directory: scripts
+        run: npm ci
+
+      - name: Build appcast.xml
+        working-directory: scripts
+        env:
+          SIG: ${{ needs.build.outputs.sig }}
+          VERSION: ${{ github.ref_name }}
+          URL: https://github.com/Narazaka/vrc_avatar_manager/releases/download/${{ github.ref_name }}/vrc_avatar_manager-${{ github.ref_name }}.0-installer.exe
+        run: npm run gen
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

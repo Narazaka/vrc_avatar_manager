@@ -169,10 +169,15 @@ class Tag {
   }
 
   bool Function(String) _genRegexpFilter() {
-    var regexp = RegExp(search, caseSensitive: caseSensitive);
-    return invert
-        ? (String s) => !regexp.hasMatch(s)
-        : (String s) => regexp.hasMatch(s);
+    try {
+      var regexp = RegExp(search, caseSensitive: caseSensitive);
+      return invert
+          ? (String s) => !regexp.hasMatch(s)
+          : (String s) => regexp.hasMatch(s);
+    } catch (e) {
+      print("regexp error: $e");
+      return (String s) => false;
+    }
   }
 
   bool Function(AvatarWithStat) _genRequirementsFilter() {

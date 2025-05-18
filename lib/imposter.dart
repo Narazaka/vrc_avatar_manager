@@ -17,14 +17,14 @@ const noImposterBadge = Badge(
 var hasImposterInactiveBadge = Badge(
   label: const Text("i"),
   textStyle: const TextStyle(fontSize: 9),
-  backgroundColor: Colors.cyan[300],
+  backgroundColor: Colors.cyan[200],
   largeSize: 9,
 );
 
 var noImposterInactiveBadge = Badge(
   label: const Text("i"),
   textStyle: const TextStyle(fontSize: 9),
-  backgroundColor: Colors.red[200],
+  backgroundColor: Colors.red[100],
   largeSize: 9,
 );
 

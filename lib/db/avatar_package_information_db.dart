@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 import 'package:vrc_avatar_manager/app_dir.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information.dart';
+import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
+import 'package:vrc_avatar_manager/db/avatar_package_information_v2.dart';
 import 'package:vrc_avatar_manager/prefs.dart';
 
 class AvatarPackageInformationDb {
@@ -15,7 +17,7 @@ class AvatarPackageInformationDb {
     var dir = "${AppDir.dir}/.avatar_package_informations";
     await Directory(dir).create(recursive: true);
     return _instance ??= AvatarPackageInformationDb._(await Isar.open(
-        [AvatarPackageInformationSchema],
+        [AvatarPackageInformationSchema, AvatarPackageInformationV2Schema],
         directory: dir, name: 'avatar_package_informations'));
   }
 
@@ -23,31 +25,46 @@ class AvatarPackageInformationDb {
     return isar.avatarPackageInformations.where().count();
   }
 
-  Future<List<AvatarPackageInformation>> getAll() async {
-    return isar.avatarPackageInformations.where().findAll();
-  }
-
-  Future<List<AvatarPackageInformation>> getAllByUnitypackageIdVersions(
-      Iterable<(String, int)> idVersions) async {
-    return isar.avatarPackageInformations
+  Future<List<AvatarPackageInformationLike>> getAllBy(
+      Iterable<({String avatarId, String platform, String unityPackageId})>
+          ids) async {
+    var v2Informations = await isar.avatarPackageInformationV2s
         .where()
         .filter()
         .anyOf(
-            idVersions,
-            (q, idVersion) => q
-                .unityPackageIdEqualTo(idVersion.$1)
+            ids,
+            (q, id) => q
+                .avatarIdEqualTo(id.avatarId)
                 .and()
-                .versionEqualTo(idVersion.$2))
+                .platformEqualTo(id.platform))
         .findAll();
+    var exists = v2Informations.map((v) => (v.avatarId, v.platform)).toSet();
+    var avatarByUnityPackageId = {
+      for (var v
+          in ids.where((id) => !exists.contains((id.avatarId, id.platform))))
+        v.unityPackageId: v
+    };
+    var v1 = await isar.avatarPackageInformations
+        .where()
+        .filter()
+        .anyOf(
+            avatarByUnityPackageId.keys, (q, id) => q.unityPackageIdEqualTo(id))
+        .findAll();
+    for (var v in v1) {
+      var id = avatarByUnityPackageId[v.unityPackageId]!;
+      v.avatarId = id.avatarId;
+      v.platform = id.platform;
+    }
+    return [...v2Informations, ...v1];
   }
 
-  Future<void> put(AvatarPackageInformation account) async {
+  Future<void> put(AvatarPackageInformationV2 item) async {
     await isar.writeTxn(() async {
-      await isar.avatarPackageInformations.putByUnityPackageId(account);
+      await isar.avatarPackageInformationV2s.putByAvatarIdPlatform(item);
     });
   }
 
-  Future<void> deleteAll(List<String> unityPackageIds) async {
+  Future<void> deleteAllV1(List<String> unityPackageIds) async {
     await isar.writeTxn(() async {
       await isar.avatarPackageInformations
           .deleteAllByUnityPackageId(unityPackageIds);
@@ -57,12 +74,8 @@ class AvatarPackageInformationDb {
   Future<void> clear() async {
     await isar.writeTxn(() async {
       await isar.avatarPackageInformations.clear();
+      await isar.avatarPackageInformationV2s.clear();
     });
-  }
-
-  Stream<void> watchAccounts({fireImmediately = false}) {
-    return isar.avatarPackageInformations
-        .watchLazy(fireImmediately: fireImmediately);
   }
 
   Future<void> migrate() async {

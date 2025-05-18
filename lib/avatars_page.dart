@@ -7,8 +7,9 @@ import 'package:vrc_avatar_manager/avatar_view.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/clickable_view.dart';
 import 'package:vrc_avatar_manager/custom_scroll_behaviour.dart';
-import 'package:vrc_avatar_manager/db/avatar_package_information.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_db.dart';
+import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
+import 'package:vrc_avatar_manager/db/avatar_package_information_v2.dart';
 import 'package:vrc_avatar_manager/db/tag.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
@@ -55,7 +56,10 @@ class _AvatarsPageState extends State<AvatarsPage> {
 
   List<AvatarWithStat> _sortedAvatars = [];
 
-  final Map<String, AvatarPackageInformation> _avatarPackageInformations = {};
+  final Map<({String avatarId, String platform}), AvatarPackageInformationLike>
+      _avatarPackageInformations = {};
+  final Set<({String avatarId, String platform})>
+      _erroredAvatarPackageInformations = {};
 
   bool _confirmWhenChangeAvatar = false;
   bool _useOsc = false;
@@ -84,7 +88,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
   @override
   void initState() {
     super.initState();
-    _avatarSizeTimer = Timer.periodic(Duration(seconds: 30), _fetchAvatarSize);
+    _avatarSizeTimer = Timer.periodic(Duration(seconds: 8), _fetchAvatarSize);
     _searchFocusNode.addListener(() {
       setState(() {
         _searchFocused = _searchFocusNode.hasFocus;
@@ -151,23 +155,49 @@ class _AvatarsPageState extends State<AvatarsPage> {
           comparator(a.updatedAt, b.updatedAt)),
       SortBy.pcSize => _avatars.sorted((a, b) =>
           comparator<num>(
-                  (_avatarPackageInformations[a.pc.main?.id]?.size ?? 0),
-                  (_avatarPackageInformations[b.pc.main?.id]?.size ?? 0)) *
+                  (_avatarPackageInformations[(avatarId: a.id, platform: AvatarWithStat.platformPc)]
+                          ?.size ??
+                      0),
+                  (_avatarPackageInformations[(avatarId: b.id, platform: AvatarWithStat.platformPc)]
+                          ?.size ??
+                      0)) *
               10000 +
           comparator<num>(
-                  (_avatarPackageInformations[a.android.main?.id]?.size ?? 0),
-                  (_avatarPackageInformations[b.android.main?.id]?.size ?? 0)) *
+                  (_avatarPackageInformations[(
+                        avatarId: a.id,
+                        platform: AvatarWithStat.platformAndroid
+                      )]
+                          ?.size ??
+                      0),
+                  (_avatarPackageInformations[(
+                        avatarId: b.id,
+                        platform: AvatarWithStat.platformAndroid
+                      )]
+                          ?.size ??
+                      0)) *
               1000 +
           comparator(a.createdAt, b.createdAt) * 10 +
           comparator(a.updatedAt, b.updatedAt)),
       SortBy.androidSize => _avatars.sorted((a, b) =>
           comparator<num>(
-                  (_avatarPackageInformations[a.android.main?.id]?.size ?? 0),
-                  (_avatarPackageInformations[b.android.main?.id]?.size ?? 0)) *
+                  (_avatarPackageInformations[(
+                        avatarId: a.id,
+                        platform: AvatarWithStat.platformAndroid
+                      )]
+                          ?.size ??
+                      0),
+                  (_avatarPackageInformations[(
+                        avatarId: b.id,
+                        platform: AvatarWithStat.platformAndroid
+                      )]
+                          ?.size ??
+                      0)) *
               10000 +
           comparator<num>(
-                  (_avatarPackageInformations[a.pc.main?.id]?.size ?? 0),
-                  (_avatarPackageInformations[b.pc.main?.id]?.size ?? 0)) *
+                  (_avatarPackageInformations[(avatarId: a.id, platform: AvatarWithStat.platformPc)]
+                          ?.size ??
+                      0),
+                  (_avatarPackageInformations[(avatarId: b.id, platform: AvatarWithStat.platformPc)]?.size ?? 0)) *
               1000 +
           comparator(a.createdAt, b.createdAt) * 10 +
           comparator(a.updatedAt, b.updatedAt)),
@@ -191,19 +221,22 @@ class _AvatarsPageState extends State<AvatarsPage> {
         var avatarStats =
             avatars.map((avatar) => AvatarWithStat(avatar)).toList();
         _newAvatars.addAll(avatarStats);
-        final aps =
-            await _avatarPackageInformationDb.getAllByUnitypackageIdVersions({
-          ...avatarStats
-              .where((avatar) => avatar.hasPc)
-              .map((avatar) => (avatar.pc.main!.id, avatar.version)),
-          ...avatarStats
-              .where((avatar) => avatar.hasAndroid)
-              .map((avatar) => (avatar.android.main!.id, avatar.version)),
+        final aps = await _avatarPackageInformationDb.getAllBy({
+          ...avatarStats.where((avatar) => avatar.hasPc).map((avatar) => (
+                avatarId: avatar.id,
+                platform: avatar.pc.main!.platform,
+                unityPackageId: avatar.pc.main!.id
+              )),
+          ...avatarStats.where((avatar) => avatar.hasAndroid).map((avatar) => (
+                avatarId: avatar.id,
+                platform: avatar.android.main!.platform,
+                unityPackageId: avatar.android.main!.id
+              )),
         });
         setState(() {
           _avatars.addAll(avatarStats);
-          _avatarPackageInformations
-              .addEntries(aps.map((ap) => MapEntry(ap.unityPackageId, ap)));
+          _avatarPackageInformations.addEntries(aps.map((ap) =>
+              MapEntry((avatarId: ap.avatarId, platform: ap.platform), ap)));
           _sortAvatars();
         });
       }
@@ -320,10 +353,15 @@ class _AvatarsPageState extends State<AvatarsPage> {
                             avatar: avatar,
                             detailed: true,
                             pcAvatarPackageInformation:
-                                _avatarPackageInformations[avatar.pc.main?.id],
+                                _avatarPackageInformations[(
+                              avatarId: avatar.id,
+                              platform: AvatarWithStat.platformPc
+                            )],
                             androidAvatarPackageInformation:
-                                _avatarPackageInformations[
-                                    avatar.android.main?.id],
+                                _avatarPackageInformations[(
+                              avatarId: avatar.id,
+                              platform: AvatarWithStat.platformAndroid
+                            )],
                             showHaveImposter: _showHaveImposter,
                             showNotHaveImposter: _showNotHaveImposter,
                             showTags: _showTags,
@@ -465,29 +503,47 @@ class _AvatarsPageState extends State<AvatarsPage> {
   }
 
   void _fetchAvatarSize(Timer timer) async {
-    print("[_fetchAvatarSize] called");
     final prefs = await Prefs.instance;
     if (!await prefs.fetchAvatarSize || !_avatarPackageInformationDbLoaded) {
       return;
     }
-    final targetUnityPackageIdVersions = {
-      ..._avatars
-          .where((avatar) => avatar.hasPc)
-          .map((avatar) => (avatar.pc.main!.id, avatar.version)),
-      ..._avatars
-          .where((avatar) => avatar.hasAndroid)
-          .map((avatar) => (avatar.android.main!.id, avatar.version)),
+    final targets = {
+      ...{
+        for (var avatar in _avatars.where((avatar) => avatar.hasPc))
+          (avatar.pc.main!.id, avatar.version): (
+            avatarId: avatar.id,
+            platform: avatar.pc.main!.platform,
+            unityPackageId: avatar.pc.main!.id
+          )
+      },
+      ...{
+        for (var avatar in _avatars.where((avatar) => avatar.hasAndroid))
+          (avatar.android.main!.id, avatar.version): (
+            avatarId: avatar.id,
+            platform: avatar.android.main!.platform,
+            unityPackageId: avatar.android.main!.id
+          )
+      }
     };
-    targetUnityPackageIdVersions.removeAll(_avatarPackageInformations.values
-        .map((ap) => (ap.unityPackageId, ap.version)));
-    if (targetUnityPackageIdVersions.isEmpty) {
+    for (var ai in _avatarPackageInformations.values) {
+      targets.remove((ai.unityPackageId, ai.version));
+    }
+    if (targets.isEmpty) {
       return;
     }
-    final targetUnityPackageIds = {
-      ...targetUnityPackageIdVersions.map((e) => e.$1)
-    };
+    final targetUnityPackageIds =
+        targets.values.map((v) => v.unityPackageId).toSet();
+    final notErroredTargetUnityPackageIds = targets.values
+        .where((v) => !_erroredAvatarPackageInformations
+            .contains((avatarId: v.avatarId, platform: v.platform)))
+        .map((v) => v.unityPackageId)
+        .toSet();
 
     var targetAvatar = _filteredAvatars.firstWhereOrNull((avatar) =>
+            avatar.hasUnityPackageIdInMain(notErroredTargetUnityPackageIds)) ??
+        _avatars.firstWhereOrNull((avatar) =>
+            avatar.hasUnityPackageIdInMain(notErroredTargetUnityPackageIds)) ??
+        _filteredAvatars.firstWhereOrNull((avatar) =>
             avatar.hasUnityPackageIdInMain(targetUnityPackageIds)) ??
         _avatars.firstWhereOrNull(
             (avatar) => avatar.hasUnityPackageIdInMain(targetUnityPackageIds));
@@ -505,38 +561,67 @@ class _AvatarsPageState extends State<AvatarsPage> {
       return;
     }
     final stat = AvatarWithStat(avatarDetail);
-    await _fetchMainAvatarSize(avatarDetail, stat.pc.main, "$errorTarget PC");
-    await _fetchMainAvatarSize(
-        avatarDetail, stat.android.main, "$errorTarget Android");
+    if (!await _fetchMainAvatarSize(
+        avatarDetail, stat.pc.main, "$errorTarget PC")) {
+      setState(() {
+        _erroredAvatarPackageInformations
+            .add((avatarId: stat.id, platform: AvatarWithStat.platformPc));
+      });
+      for (var up in stat.sortedUnityPackagesForDebug
+          .where((up) => up.platform == AvatarWithStat.platformPc)) {
+        print(
+            "[_fetchAvatarSize][sortedUnityPackagesForDebug] ${up.scanStatus} ${up.variant} ${up.unityVersion} ${up.performanceRating} ${up.createdAt} ${up.assetVersion} ${up.assetUrl}");
+      }
+    }
+    if (!await _fetchMainAvatarSize(
+        avatarDetail, stat.android.main, "$errorTarget Android")) {
+      setState(() {
+        _erroredAvatarPackageInformations
+            .add((avatarId: stat.id, platform: AvatarWithStat.platformAndroid));
+      });
+      for (var up in stat.sortedUnityPackagesForDebug
+          .where((up) => up.platform == AvatarWithStat.platformAndroid)) {
+        print(
+            "[_fetchAvatarSize][sortedUnityPackagesForDebug] ${up.scanStatus} ${up.variant} ${up.unityVersion} ${up.performanceRating} ${up.createdAt} ${up.assetVersion} ${up.assetUrl}");
+      }
+    }
     setState(() {
       _sortAvatars();
     });
   }
 
-  Future<void> _fetchMainAvatarSize(
+  Future<bool> _fetchMainAvatarSize(
       Avatar avatar, UnityPackage? up, String errorTarget) async {
     if (up == null) {
-      return;
+      return true;
     }
     if (up.assetUrl == null) {
       print("[_fetchMainAvatarSize][$errorTarget] assetUrl empty");
-      return;
+      return true;
     }
+    final stopwatch = Stopwatch()..start();
     final size = await _api.fileSize(up.assetUrl!);
+    stopwatch.stop();
+    print("[_fetchMainAvatarSize] fetch time ${stopwatch.elapsed}");
     if (size == null) {
       print("[_fetchMainAvatarSize][$errorTarget] Failed to get size");
       print(up);
-      return;
+      return false;
     }
-    final ap = AvatarPackageInformation()
+    final ap = AvatarPackageInformationV2()
+      ..avatarId = avatar.id
+      ..platform = up.platform
       ..unityPackageId = up.id
       ..version = avatar.version
       ..size = size;
-    print(ap);
     await _avatarPackageInformationDb.put(ap);
     setState(() {
-      _avatarPackageInformations[ap.unityPackageId] = ap;
+      _avatarPackageInformations[(
+        avatarId: ap.avatarId,
+        platform: ap.platform
+      )] = ap;
     });
+    return true;
   }
 
   void _showInfo(String message) {
@@ -925,11 +1010,15 @@ class _AvatarsPageState extends State<AvatarsPage> {
                               child: AvatarView(
                                 avatar: avatar,
                                 pcAvatarPackageInformation:
-                                    _avatarPackageInformations[
-                                        avatar.pc.main?.id],
+                                    _avatarPackageInformations[(
+                                  avatarId: avatar.id,
+                                  platform: AvatarWithStat.platformPc
+                                )],
                                 androidAvatarPackageInformation:
-                                    _avatarPackageInformations[
-                                        avatar.android.main?.id],
+                                    _avatarPackageInformations[(
+                                  avatarId: avatar.id,
+                                  platform: AvatarWithStat.platformAndroid
+                                )],
                                 selected: _editTagAvatarTag != null &&
                                     _editTagAvatarTag!.avatarIds
                                         .contains(avatar.id),

@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
-import 'package:vrc_avatar_manager/db/avatar_package_information.dart';
+import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
 import 'package:vrc_avatar_manager/image_cache_manager.dart';
 import 'package:vrc_avatar_manager/small_icon_button.dart';
 import 'package:vrc_avatar_manager/vrc_api.dart';
@@ -42,8 +42,8 @@ class AvatarView extends StatelessWidget {
   });
 
   final AvatarWithStat avatar;
-  final AvatarPackageInformation? pcAvatarPackageInformation;
-  final AvatarPackageInformation? androidAvatarPackageInformation;
+  final AvatarPackageInformationLike? pcAvatarPackageInformation;
+  final AvatarPackageInformationLike? androidAvatarPackageInformation;
   final bool selected;
   final bool detailed;
   final bool showHaveImposter;

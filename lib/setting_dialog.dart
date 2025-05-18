@@ -127,7 +127,7 @@ class _SettingDialogState extends State<SettingDialog> {
                               .map((up) => up.id)
                               .toList();
                           final db = await AvatarPackageInformationDb.instance;
-                          await db.deleteAll(targetUnityPackageIds);
+                          await db.deleteAllV1(targetUnityPackageIds);
                           Prefs.instance.then((prefs) async {
                             await prefs
                                 .setAvatarPackageInformationDbUnityPackageSelectBugFixedByAccount(

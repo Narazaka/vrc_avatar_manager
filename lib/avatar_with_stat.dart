@@ -44,8 +44,12 @@ int _unityVersionOrder(UnityPackage up) {
 }
 
 class AvatarWithStat {
-  AvatarWithStat(this.avatar) {
-    var ups = avatar.unityPackages.sorted((a, b) {
+  static const String platformPc = "standalonewindows";
+  static const String platformAndroid = "android";
+
+  static List<UnityPackage> _getSortedUnityPackages(
+      Set<UnityPackage> unityPackages) {
+    return unityPackages.sorted((a, b) {
       final uv = _unityVersionOrder(a).compareTo(_unityVersionOrder(b));
       if (uv != 0) return -uv;
       final ca =
@@ -53,17 +57,21 @@ class AvatarWithStat {
       if (ca != 0) return -ca;
       final vo = _variantOrder(a.variant).compareTo(_variantOrder(b.variant));
       return -vo;
-    }).toList();
+    });
+  }
+
+  AvatarWithStat(this.avatar) {
+    var ups = _getSortedUnityPackages(avatar.unityPackages);
     pc = AvatarStat(
-        main: ups.firstWhereOrNull((u) =>
-            u.platform == "standalonewindows" && u.variant != "impostor"),
-        impostor: ups.firstWhereOrNull((u) =>
-            u.platform == "standalonewindows" && u.variant == "impostor"));
+        main: ups.firstWhereOrNull(
+            (u) => u.platform == platformPc && u.variant != "impostor"),
+        impostor: ups.firstWhereOrNull(
+            (u) => u.platform == platformPc && u.variant == "impostor"));
     android = AvatarStat(
         main: ups.firstWhereOrNull(
-            (u) => u.platform == "android" && u.variant != "impostor"),
+            (u) => u.platform == platformAndroid && u.variant != "impostor"),
         impostor: ups.firstWhereOrNull(
-            (u) => u.platform == "android" && u.variant == "impostor"));
+            (u) => u.platform == platformAndroid && u.variant == "impostor"));
   }
 
   final Avatar avatar;
@@ -90,4 +98,6 @@ class AvatarWithStat {
       android.hasMain && ids.contains(android.main!.id);
   List<String> get mainUnityPackageIds =>
       [if (pc.hasMain) pc.main!.id, if (android.hasMain) android.main!.id];
+  List<UnityPackage> get sortedUnityPackagesForDebug =>
+      _getSortedUnityPackages(avatar.unityPackages);
 }

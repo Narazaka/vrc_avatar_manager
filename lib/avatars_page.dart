@@ -559,7 +559,10 @@ class _AvatarsPageState extends State<AvatarsPage> {
     print("[_fetchAvatarSize] ${targetAvatar.name}");
     final errorTarget = "${targetAvatar.id} ${targetAvatar.name}";
 
+    final stopwatch = Stopwatch()..start();
     final avatarDetail = await _api.avatar(targetAvatar.id);
+    stopwatch.stop();
+    print("[_fetchAvatarSize] api.avatar ${stopwatch.elapsed}");
     if (avatarDetail == null) {
       print("[_fetchAvatarSize][$errorTarget] Failed to load avatar");
       return;
@@ -606,7 +609,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
     final stopwatch = Stopwatch()..start();
     final size = await _api.fileSize(up.assetUrl!);
     stopwatch.stop();
-    print("[_fetchMainAvatarSize] fetch time ${stopwatch.elapsed}");
+    print("[_fetchMainAvatarSize] api.fileSize ${stopwatch.elapsed}");
     if (size == null) {
       print("[_fetchMainAvatarSize][$errorTarget] Failed to get size");
       print(up);

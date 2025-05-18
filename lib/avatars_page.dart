@@ -368,6 +368,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
                             showHaveImposter: _showHaveImposter,
                             showNotHaveImposter: _showNotHaveImposter,
                             showTags: _showTags,
+                            api: _api,
                           ),
                           SizedBox(
                               width: 200,

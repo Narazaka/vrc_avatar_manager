@@ -40,6 +40,7 @@ class AvatarView extends StatelessWidget {
     this.showHaveImposter = true,
     this.showNotHaveImposter = true,
     this.showTags = true,
+    this.api,
   });
 
   final AvatarWithStat avatar;
@@ -50,6 +51,7 @@ class AvatarView extends StatelessWidget {
   final bool showHaveImposter;
   final bool showNotHaveImposter;
   final bool showTags;
+  final VrcApi? api;
 
   static Image performanceIcon(PerformanceRatings p) {
     switch (p) {
@@ -86,7 +88,10 @@ class AvatarView extends StatelessWidget {
         ));
     return Container(
         width: 200,
-        height: 220 + (detailed ? 70 : 0) + (showTags ? 20 : 0),
+        height: 220 +
+            (detailed ? 70 : 0) +
+            (showTags ? 20 : 0) +
+            (detailed && api != null ? 40 : 0),
         color: selected ? Colors.green : null,
         child: Column(children: [
           if (avatar.releaseStatus == ReleaseStatus.public)
@@ -162,30 +167,6 @@ class AvatarView extends StatelessWidget {
             Text("作成: ${dateFormat.format(avatar.createdAt.toLocal())}"),
           if (detailed)
             Text("更新: ${dateFormat.format(avatar.updatedAt.toLocal())}"),
-          /*
-          if (detailed)
-            ElevatedButton(
-                onPressed: () async {
-                  final api = VrcApi.load("1");
-                  final a = await api.avatar(avatar.id);
-                  if (a == null) {
-                    print("Failed to load avatar");
-                    return;
-                  }
-                  final stat = AvatarWithStat(a);
-                  if (stat.pc.main?.assetUrl == null) {
-                    print("No asset url");
-                    return;
-                  }
-                  final res = await api.fileSize(stat.pc.main!.assetUrl!);
-                  if (res == null) {
-                    print("Failed to get file");
-                    return;
-                  }
-                  print("File size: $res");
-                },
-                child: Text("size")),
-                */
           if (detailed)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -210,6 +191,95 @@ class AvatarView extends StatelessWidget {
                     icon: Icon(Icons.open_in_new)),
               ],
             ),
+          if (detailed && api != null && avatar.hasImpostor)
+            TextButton(
+                onPressed: () {
+                  _showActionDialog(context, "Imposterを削除", "本当に削除しますか？",
+                      "Imposterの削除に成功しました", "Imposterの削除に失敗しました", () async {
+                    return (await api!.deleteImposter(avatar.id), null);
+                  });
+                },
+                child: const Text("Imposterを削除")),
+          if (detailed && api != null && !avatar.hasImpostor)
+            TextButton(
+                onPressed: () {
+                  _showActionDialog(
+                      context,
+                      "Imposterを作成",
+                      "本当に作成しますか？",
+                      "Imposterの作成がスケジュールされました",
+                      "Imposterの作成に失敗しました", () async {
+                    var newAvatar = await api!.avatar(avatar.id);
+                    if (newAvatar == null) {
+                      return (false, "アバターの取得に失敗しました");
+                    }
+                    var newAvatarWithStat = AvatarWithStat(newAvatar);
+                    if (newAvatarWithStat.hasImpostor) {
+                      return (true, "Imposterがすでに存在します");
+                    }
+                    return (await api!.enqueueImposter(avatar.id), null);
+                  });
+                },
+                child: const Text("Imposterを作成")),
         ]));
+  }
+
+  Future<void> _showActionDialog(
+    BuildContext context,
+    String title,
+    String message,
+    String successMessage,
+    String errorMessage,
+    Future<(bool, String?)> Function() onOk,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("キャンセル"),
+            ),
+            TextButton(
+              onPressed: () async {
+                final (success, message) = await onOk();
+                if (!success) {
+                  _showError(message ?? errorMessage, context);
+                } else {
+                  _showInfo(message ?? successMessage, context);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showInfo(String message, BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        showCloseIcon: true,
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _showError(String message, BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        showCloseIcon: true,
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }

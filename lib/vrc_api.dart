@@ -148,4 +148,29 @@ class VrcApi {
       return null;
     }
   }
+
+  Future<bool> enqueueImposter(String avatarId) async {
+    final res = await vrchatDart.rawApi
+        .getAvatarsApi()
+        .enqueueImpostor(avatarId: avatarId)
+        .validateVrc();
+    if (res.succeeded) {
+      print(res.success!.data);
+      return true;
+    }
+    print(res.failure.toString());
+    return false;
+  }
+
+  Future<bool> deleteImposter(String avatarId) async {
+    final res = await vrchatDart.rawApi
+        .getAvatarsApi()
+        .deleteImpostor(avatarId: avatarId)
+        .validateVrc();
+    if (res.succeeded) {
+      return true;
+    }
+    print(res.failure.toString());
+    return false;
+  }
 }

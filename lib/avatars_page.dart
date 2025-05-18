@@ -91,7 +91,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
   @override
   void initState() {
     super.initState();
-    _avatarSizeTimer = Timer.periodic(Duration(seconds: 8), _fetchAvatarSize);
+    _avatarSizeTimer = Timer.periodic(Duration(seconds: 15), _fetchAvatarSize);
     _searchFocusNode.addListener(() {
       setState(() {
         _searchFocused = _searchFocusNode.hasFocus;

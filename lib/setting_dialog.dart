@@ -102,7 +102,7 @@ class _SettingDialogState extends State<SettingDialog> {
                   _fetchAvatarSize = value!;
                 });
               },
-              title: const Text("アバターのサイズを取得する(30秒に一回)"),
+              title: const Text("アバターのサイズを取得する(15秒に一回)"),
             ),
             if (!_avatarPackageInformationDbUnityPackageSelectBugFixed &&
                 !_avatarPackageInformationDbUnityPackageSelectBugFixedByAccount)

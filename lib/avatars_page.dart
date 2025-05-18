@@ -579,6 +579,14 @@ class _AvatarsPageState extends State<AvatarsPage> {
         print(
             "[_fetchAvatarSize][sortedUnityPackagesForDebug] ${up.scanStatus} ${up.variant} ${up.unityVersion} ${up.performanceRating} ${up.createdAt} ${up.assetVersion} ${up.assetUrl}");
       }
+    } else if (stat.pc.main != null &&
+        targetAvatar.pc.main != null &&
+        (stat.pc.main!.id != targetAvatar.pc.main!.id ||
+            stat.version != targetAvatar.version)) {
+      setState(() {
+        _erroredAvatarPackageInformations
+            .add((avatarId: stat.id, platform: AvatarWithStat.platformPc));
+      });
     }
     if (!await _fetchMainAvatarSize(
         avatarDetail, stat.android.main, "$errorTarget Android")) {
@@ -591,6 +599,14 @@ class _AvatarsPageState extends State<AvatarsPage> {
         print(
             "[_fetchAvatarSize][sortedUnityPackagesForDebug] ${up.scanStatus} ${up.variant} ${up.unityVersion} ${up.performanceRating} ${up.createdAt} ${up.assetVersion} ${up.assetUrl}");
       }
+    } else if (stat.android.main != null &&
+        targetAvatar.android.main != null &&
+        (stat.android.main!.id != targetAvatar.android.main!.id ||
+            stat.version != targetAvatar.version)) {
+      setState(() {
+        _erroredAvatarPackageInformations
+            .add((avatarId: stat.id, platform: AvatarWithStat.platformAndroid));
+      });
     }
     setState(() {
       _sortAvatars();

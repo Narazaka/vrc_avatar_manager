@@ -13,10 +13,12 @@ import 'package:vrc_avatar_manager/db/avatar_package_information_v2.dart';
 import 'package:vrc_avatar_manager/db/tag.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
+import 'package:vrc_avatar_manager/imposter.dart';
 import 'package:vrc_avatar_manager/order_dialog.dart';
 import 'package:vrc_avatar_manager/performance_selector.dart';
 import 'package:vrc_avatar_manager/prefs.dart';
 import 'package:vrc_avatar_manager/setting_dialog.dart';
+import 'package:vrc_avatar_manager/small_icon_button.dart';
 import 'package:vrc_avatar_manager/vrc_osc.dart';
 import 'package:vrc_avatar_manager/wrap_with_height.dart';
 import 'package:vrc_avatar_manager/sort_by.dart';
@@ -73,6 +75,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
   bool _showNotHaveImposter = false;
   bool _showTags = false;
   bool _multiLineTagsView = false;
+  FilterByImposter _filterByImposter = FilterByImposter.none;
 
   double _tagsHeight = 50;
 
@@ -667,6 +670,11 @@ class _AvatarsPageState extends State<AvatarsPage> {
           !_androidPerformanceBlocks
               .contains(avatar.android.performanceRating));
     }
+    if (_filterByImposter == FilterByImposter.haveImposter) {
+      avatars = avatars.where((avatar) => avatar.hasImpostor);
+    } else if (_filterByImposter == FilterByImposter.notHaveImposter) {
+      avatars = avatars.where((avatar) => !avatar.hasImpostor);
+    }
     if (_search.isNotEmpty) {
       var search = _search.toLowerCase();
       avatars =
@@ -796,6 +804,36 @@ class _AvatarsPageState extends State<AvatarsPage> {
           Tooltip(
               message: "PC/Android両対応アバターを表示", child: VrcIcons.crossPlatform),
         ],
+      ),
+      Tooltip(
+        message: "Imposterありのアバターを表示",
+        child: SmallIconButton(
+            icon: _filterByImposter == FilterByImposter.haveImposter
+                ? hasImposterBadge
+                : hasImposterInactiveBadge,
+            onPressed: () {
+              setState(() {
+                _filterByImposter =
+                    _filterByImposter == FilterByImposter.haveImposter
+                        ? FilterByImposter.none
+                        : FilterByImposter.haveImposter;
+              });
+            }),
+      ),
+      Tooltip(
+        message: "Imposterなしのアバターを表示",
+        child: SmallIconButton(
+            icon: _filterByImposter == FilterByImposter.notHaveImposter
+                ? noImposterBadge
+                : noImposterInactiveBadge,
+            onPressed: () {
+              setState(() {
+                _filterByImposter =
+                    _filterByImposter == FilterByImposter.notHaveImposter
+                        ? FilterByImposter.none
+                        : FilterByImposter.notHaveImposter;
+              });
+            }),
       ),
       const SizedBox(width: 8),
       SizedBox(

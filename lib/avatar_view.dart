@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
 import 'package:vrc_avatar_manager/image_cache_manager.dart';
+import 'package:vrc_avatar_manager/imposter.dart';
 import 'package:vrc_avatar_manager/small_icon_button.dart';
 import 'package:vrc_avatar_manager/vrc_api.dart';
 import 'package:vrc_avatar_manager/vrc_icons.dart';
@@ -129,21 +130,12 @@ class AvatarView extends StatelessWidget {
               if ((showHaveImposter && avatar.hasImpostor))
                 Tooltip(
                   message: "Impostorあり",
-                  child: const material.Badge(
-                    label: Text("i"),
-                    textStyle: TextStyle(fontSize: 9),
-                    backgroundColor: Colors.cyan,
-                    largeSize: 9,
-                  ),
+                  child: hasImposterBadge,
                 )
               else if (showNotHaveImposter && !avatar.hasImpostor)
                 Tooltip(
                   message: "Impostorなし",
-                  child: const material.Badge(
-                    label: Text("i"),
-                    textStyle: TextStyle(fontSize: 9),
-                    largeSize: 9,
-                  ),
+                  child: noImposterBadge,
                 ),
             ],
           ),

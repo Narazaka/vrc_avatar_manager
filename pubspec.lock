@@ -277,18 +277,18 @@ packages:
     dependency: "direct main"
     description:
       name: dio
-      sha256: "5598aa796bbf4699afd5c67c0f5f6e2ed542afc956884b9cd58c306966efc260"
+      sha256: d90ee57923d1828ac14e492ca49440f65477f4bb1263575900be731a3dac66a9
       url: "https://pub.dev"
     source: hosted
-    version: "5.7.0"
+    version: "5.9.0"
   dio_cookie_manager:
     dependency: "direct main"
     description:
       name: dio_cookie_manager
-      sha256: e79498b0f632897ff0c28d6e8178b4bc6e9087412401f618c31fa0904ace050d
+      sha256: d39c16abcc711c871b7b29bd51c6b5f3059ef39503916c6a9df7e22c4fc595e0
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.1"
+    version: "3.3.0"
   dio_response_validator:
     dependency: "direct main"
     description:
@@ -1162,18 +1162,18 @@ packages:
     dependency: "direct main"
     description:
       name: vrchat_dart
-      sha256: "7bf782122e0d6471fcd3ef6257d90568cc5c3219be25d63227384f0be701b7cb"
+      sha256: "8c6fb075bcca730f7f968d4075eae67f0c0289cb6917f0b352a57386ba9dfa80"
       url: "https://pub.dev"
     source: hosted
-    version: "3.5.4"
+    version: "3.7.2"
   vrchat_dart_generated:
     dependency: transitive
     description:
       name: vrchat_dart_generated
-      sha256: "7e45bac05cc6d74a7950e7ef2fa9d1eaffdf6c9b7d82bb6063a65914efed6548"
+      sha256: db80b4fe0a4485c761ed200a641f0f1b624b808fd17a07fae840eeb97162bbd6
       url: "https://pub.dev"
     source: hosted
-    version: "1.19.2"
+    version: "1.20.4"
   watcher:
     dependency: transitive
     description:
@@ -1255,5 +1255,5 @@ packages:
     source: hosted
     version: "3.1.2"
 sdks:
-  dart: ">=3.7.0-0 <4.0.0"
+  dart: ">=3.8.0 <4.0.0"
   flutter: ">=3.24.0"

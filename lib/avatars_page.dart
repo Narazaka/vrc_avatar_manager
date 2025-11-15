@@ -426,12 +426,12 @@ class _AvatarsPageState extends State<AvatarsPage> {
   }
 
   Future<void> _doChangeAvatar(String id) async {
-    var res = await _api.changeAvatar(id);
-    if (res.succeeded) {
+    var (res, err) = await _api.changeAvatar(id);
+    if (res != null) {
       _showInfo("Avatar changed");
     } else {
       _showError("Avatar change failed!");
-      print(res.failure);
+      print(err);
     }
   }
 

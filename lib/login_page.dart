@@ -54,13 +54,14 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     var api = VrcApi.load(widget.accountId);
-    var res =
+    var (res, err) =
         await api.vrchatDart.auth.login(username: username, password: password);
-    if (!res.succeeded) {
+    if (res == null) {
+      print(err);
       _showError("Cannot login with that username/password");
       return;
     }
-    var authResponse = res.success!.data;
+    var authResponse = res.data;
     if (authResponse.requiresTwoFactorAuth) {
       setState(() {
         _api = api;
@@ -87,8 +88,8 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     _twoFactorController.text = "";
-    var res = await _api!.vrchatDart.auth.verify2fa(code);
-    if (!res.succeeded) {
+    var (res, err) = await _api!.vrchatDart.auth.verify2fa(code);
+    if (res == null) {
       _showError("Cannot login with that 2FA code");
       return;
     }

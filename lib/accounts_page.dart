@@ -116,11 +116,11 @@ class _AccountsPageState extends State<AccountsPage> {
       return false;
     }
     var (username, password) = credentials;
-    var res = await api.vrchatDart.auth.login(
+    var (res, err) = await api.vrchatDart.auth.login(
       username: username,
       password: password,
     );
-    if (!res.succeeded) {
+    if (res == null) {
       return false;
     }
     await Store().setDefaultAccountId(accountId);

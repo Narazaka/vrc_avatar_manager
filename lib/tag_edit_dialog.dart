@@ -106,7 +106,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
               decoration: const InputDecoration(
                 labelText: 'タイプ',
               ),
-              value: _type,
+              initialValue: _type,
               onChanged: (value) {
                 setState(() {
                   _type = value!;
@@ -136,7 +136,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
                 decoration: const InputDecoration(
                   labelText: '検索対象',
                 ),
-                value: _target,
+                initialValue: _target,
                 onChanged: (value) {
                   setState(() {
                     _target = value!;

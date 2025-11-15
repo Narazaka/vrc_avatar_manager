@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dio_response_validator/dio_response_validator.dart';
 import 'package:vrc_avatar_manager/app_dir.dart';
@@ -59,10 +60,11 @@ class VrcApi {
   }
 
   Future<bool> checkValid() async {
-    return (await check()).succeeded;
+    return (await check()).$1 != null;
   }
 
-  Future<ValidatedResponse<CurrentUser, CurrentUser>> check() async {
+  Future<(ValidResponse<CurrentUser, CurrentUser>?, InvalidResponse?)>
+      check() async {
     return vrchatDart.rawApi
         .getAuthenticationApi()
         .getCurrentUser()
@@ -74,7 +76,7 @@ class VrcApi {
   }
 
   Future<List<Avatar>?> avatars(int page) async {
-    var res = await vrchatDart.rawApi
+    var (res, err) = await vrchatDart.rawApi
         .getAvatarsApi()
         .searchAvatars(
             releaseStatus: ReleaseStatus.all,
@@ -84,15 +86,15 @@ class VrcApi {
             n: 100,
             offset: (page - 1) * 100)
         .validateVrc();
-    if (res.succeeded) {
-      return res.success!.data;
+    if (res != null) {
+      return res.data;
     }
-    print(res.failure.toString());
+    print(err.toString());
     return null;
   }
 
-  Future<ValidatedResponse<CurrentUser, CurrentUser>> changeAvatar(
-      String id) async {
+  Future<(ValidResponse<CurrentUser, CurrentUser>?, InvalidResponse?)>
+      changeAvatar(String id) async {
     return await vrchatDart.rawApi
         .getAvatarsApi()
         .selectAvatar(avatarId: id)
@@ -100,14 +102,14 @@ class VrcApi {
   }
 
   Future<Avatar?> avatar(String id) async {
-    final res = await vrchatDart.rawApi
+    final (res, err) = await vrchatDart.rawApi
         .getAvatarsApi()
         .getAvatar(avatarId: id)
         .validateVrc();
-    if (res.succeeded) {
-      return res.success!.data;
+    if (res != null) {
+      return res.data;
     }
-    print(res.failure.toString());
+    print(err.toString());
     return null;
   }
 
@@ -150,27 +152,27 @@ class VrcApi {
   }
 
   Future<bool> enqueueImposter(String avatarId) async {
-    final res = await vrchatDart.rawApi
+    final (res, err) = await vrchatDart.rawApi
         .getAvatarsApi()
         .enqueueImpostor(avatarId: avatarId)
         .validateVrc();
-    if (res.succeeded) {
-      print(res.success!.data);
+    if (res != null) {
+      print(res.data);
       return true;
     }
-    print(res.failure.toString());
+    print(err.toString());
     return false;
   }
 
   Future<bool> deleteImposter(String avatarId) async {
-    final res = await vrchatDart.rawApi
+    final (res, err) = await vrchatDart.rawApi
         .getAvatarsApi()
         .deleteImpostor(avatarId: avatarId)
         .validateVrc();
-    if (res.succeeded) {
+    if (res != null) {
       return true;
     }
-    print(res.failure.toString());
+    print(err.toString());
     return false;
   }
 }

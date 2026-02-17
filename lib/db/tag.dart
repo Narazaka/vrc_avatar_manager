@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
+import 'package:vrc_avatar_manager/db/condition_combinator.dart';
+import 'package:vrc_avatar_manager/db/condition_match_type.dart';
 import 'package:vrc_avatar_manager/db/tag_avatar.dart';
+import 'package:vrc_avatar_manager/db/tag_condition.dart';
+import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
 import 'package:vrc_avatar_manager/db/tag_target.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:collection/collection.dart';
@@ -69,6 +73,10 @@ class Tag {
 
   bool caseSensitive = false;
 
+  @enumerated
+  ConditionCombinator groupCombinator = ConditionCombinator.and;
+  List<TagConditionGroup> conditionGroups = [];
+
   @Backlink(to: 'tags')
   final tagAvatars = IsarLinks<TagAvatar>();
 
@@ -92,6 +100,8 @@ class Tag {
     target = TagTarget.name;
     search = "";
     caseSensitive = false;
+    groupCombinator = ConditionCombinator.and;
+    conditionGroups = [];
   }
 
   Future<void> toggleAvatar(String avatarId, TagsDb tagsDb) async {
@@ -135,8 +145,8 @@ class Tag {
           return avatars;
         }
         var pick = _genPick();
-        var contains = _genSimpleFilter();
-        return avatars.where((avatar) => contains(pick(avatar)));
+        var matches = _genSimpleFilter();
+        return avatars.where((avatar) => pick(avatar).any(matches));
       case TagType.regexp:
         final requirementsFilter = _genRequirementsFilter();
         avatars = avatars.where(requirementsFilter);
@@ -144,15 +154,22 @@ class Tag {
           return avatars;
         }
         var pick = _genPick();
-        var contains = _genRegexpFilter();
-        return avatars.where((avatar) => contains(pick(avatar)));
+        var matches = _genRegexpFilter();
+        return avatars.where((avatar) => pick(avatar).any(matches));
+      case TagType.conditions:
+        final requirementsFilter = _genRequirementsFilter();
+        avatars = avatars.where(requirementsFilter);
+        if (conditionGroups.isEmpty) return avatars;
+        return avatars.where((avatar) => _matchesConditions(avatar));
     }
   }
 
-  String Function(AvatarWithStat) _genPick() => switch (target) {
-        TagTarget.name => (AvatarWithStat avatar) => avatar.name,
+  List<String> Function(AvatarWithStat) _genPick() => switch (target) {
+        TagTarget.name => (AvatarWithStat avatar) => [avatar.name],
         TagTarget.description => (AvatarWithStat avatar) =>
-            avatar.avatar.description,
+            [avatar.avatar.description],
+        TagTarget.nameOrDescription => (AvatarWithStat avatar) =>
+            [avatar.name, avatar.avatar.description],
       };
 
   bool Function(String) _genSimpleFilter() {
@@ -229,6 +246,62 @@ class Tag {
       return (AvatarWithStat avatar) =>
           avatar.android.performanceRating == null ||
           !ignoreAndroid.contains(avatar.android.performanceRating);
+    }
+  }
+
+  // --- conditions matching ---
+
+  bool _matchesConditions(AvatarWithStat avatar) {
+    switch (groupCombinator) {
+      case ConditionCombinator.and:
+        // CNF: all groups must pass, within each group any condition passes (OR)
+        return conditionGroups.every((group) => _matchesGroupOr(avatar, group));
+      case ConditionCombinator.or:
+        // DNF: any group must pass, within each group all conditions pass (AND)
+        return conditionGroups.any((group) => _matchesGroupAnd(avatar, group));
+    }
+  }
+
+  bool _matchesGroupOr(AvatarWithStat avatar, TagConditionGroup group) {
+    if (group.conditions.isEmpty) return true;
+    return group.conditions.any((cond) => _matchesCondition(avatar, cond));
+  }
+
+  bool _matchesGroupAnd(AvatarWithStat avatar, TagConditionGroup group) {
+    if (group.conditions.isEmpty) return true;
+    return group.conditions.every((cond) => _matchesCondition(avatar, cond));
+  }
+
+  bool _matchesCondition(AvatarWithStat avatar, TagCondition cond) {
+    final fields = switch (cond.target) {
+      TagTarget.name => [avatar.name],
+      TagTarget.description => [avatar.avatar.description],
+      TagTarget.nameOrDescription => [avatar.name, avatar.avatar.description],
+    };
+    final filter = switch (cond.matchType) {
+      ConditionMatchType.contains => _conditionContainsFilter(cond),
+      ConditionMatchType.regexp => _conditionRegexpFilter(cond),
+    };
+    final matched = fields.any(filter);
+    return cond.invert ? !matched : matched;
+  }
+
+  bool Function(String) _conditionContainsFilter(TagCondition cond) {
+    if (cond.caseSensitive) {
+      return (String s) => s.contains(cond.search);
+    } else {
+      var lowerSearch = cond.search.toLowerCase();
+      return (String s) => s.toLowerCase().contains(lowerSearch);
+    }
+  }
+
+  bool Function(String) _conditionRegexpFilter(TagCondition cond) {
+    try {
+      var regexp = RegExp(cond.search, caseSensitive: cond.caseSensitive);
+      return (String s) => regexp.hasMatch(s);
+    } catch (e) {
+      print("regexp error: $e");
+      return (String s) => false;
     }
   }
 }

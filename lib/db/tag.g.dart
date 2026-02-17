@@ -27,66 +27,78 @@ const TagSchema = CollectionSchema(
       name: r'color',
       type: IsarType.long,
     ),
-    r'groupId': PropertySchema(
+    r'conditionGroups': PropertySchema(
       id: 2,
+      name: r'conditionGroups',
+      type: IsarType.objectList,
+      target: r'TagConditionGroup',
+    ),
+    r'groupCombinator': PropertySchema(
+      id: 3,
+      name: r'groupCombinator',
+      type: IsarType.byte,
+      enumMap: _TaggroupCombinatorEnumValueMap,
+    ),
+    r'groupId': PropertySchema(
+      id: 4,
       name: r'groupId',
       type: IsarType.long,
     ),
     r'ignoreAndroidPerformanceRatings': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'ignoreAndroidPerformanceRatings',
       type: IsarType.byteList,
       enumMap: _TagignoreAndroidPerformanceRatingsEnumValueMap,
     ),
     r'ignorePcPerformanceRatings': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'ignorePcPerformanceRatings',
       type: IsarType.byteList,
       enumMap: _TagignorePcPerformanceRatingsEnumValueMap,
     ),
     r'inactiveColor': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'inactiveColor',
       type: IsarType.long,
     ),
     r'invert': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'invert',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'name',
       type: IsarType.string,
     ),
     r'order': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'order',
       type: IsarType.long,
     ),
     r'requireAndroid': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'requireAndroid',
       type: IsarType.bool,
     ),
     r'requirePc': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'requirePc',
       type: IsarType.bool,
     ),
     r'search': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'search',
       type: IsarType.string,
     ),
     r'target': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'target',
       type: IsarType.byte,
       enumMap: _TagtargetEnumValueMap,
     ),
     r'type': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TagtypeEnumValueMap,
@@ -107,7 +119,10 @@ const TagSchema = CollectionSchema(
       linkName: r'tags',
     )
   },
-  embeddedSchemas: {},
+  embeddedSchemas: {
+    r'TagConditionGroup': TagConditionGroupSchema,
+    r'TagCondition': TagConditionSchema
+  },
   getId: _tagGetId,
   getLinks: _tagGetLinks,
   attach: _tagAttach,
@@ -120,6 +135,15 @@ int _tagEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.conditionGroups.length * 3;
+  {
+    final offsets = allOffsets[TagConditionGroup]!;
+    for (var i = 0; i < object.conditionGroups.length; i++) {
+      final value = object.conditionGroups[i];
+      bytesCount +=
+          TagConditionGroupSchema.estimateSize(value, offsets, allOffsets);
+    }
+  }
   bytesCount += 3 + object.ignoreAndroidPerformanceRatings.length;
   bytesCount += 3 + object.ignorePcPerformanceRatings.length;
   bytesCount += 3 + object.name.length * 3;
@@ -135,20 +159,27 @@ void _tagSerialize(
 ) {
   writer.writeBool(offsets[0], object.caseSensitive);
   writer.writeLong(offsets[1], object.color);
-  writer.writeLong(offsets[2], object.groupId);
-  writer.writeByteList(offsets[3],
+  writer.writeObjectList<TagConditionGroup>(
+    offsets[2],
+    allOffsets,
+    TagConditionGroupSchema.serialize,
+    object.conditionGroups,
+  );
+  writer.writeByte(offsets[3], object.groupCombinator.index);
+  writer.writeLong(offsets[4], object.groupId);
+  writer.writeByteList(offsets[5],
       object.ignoreAndroidPerformanceRatings.map((e) => e.index).toList());
-  writer.writeByteList(offsets[4],
+  writer.writeByteList(offsets[6],
       object.ignorePcPerformanceRatings.map((e) => e.index).toList());
-  writer.writeLong(offsets[5], object.inactiveColor);
-  writer.writeBool(offsets[6], object.invert);
-  writer.writeString(offsets[7], object.name);
-  writer.writeLong(offsets[8], object.order);
-  writer.writeBool(offsets[9], object.requireAndroid);
-  writer.writeBool(offsets[10], object.requirePc);
-  writer.writeString(offsets[11], object.search);
-  writer.writeByte(offsets[12], object.target.index);
-  writer.writeByte(offsets[13], object.type.index);
+  writer.writeLong(offsets[7], object.inactiveColor);
+  writer.writeBool(offsets[8], object.invert);
+  writer.writeString(offsets[9], object.name);
+  writer.writeLong(offsets[10], object.order);
+  writer.writeBool(offsets[11], object.requireAndroid);
+  writer.writeBool(offsets[12], object.requirePc);
+  writer.writeString(offsets[13], object.search);
+  writer.writeByte(offsets[14], object.target.index);
+  writer.writeByte(offsets[15], object.type.index);
 }
 
 Tag _tagDeserialize(
@@ -160,33 +191,43 @@ Tag _tagDeserialize(
   final object = Tag();
   object.caseSensitive = reader.readBool(offsets[0]);
   object.color = reader.readLong(offsets[1]);
-  object.groupId = reader.readLong(offsets[2]);
+  object.conditionGroups = reader.readObjectList<TagConditionGroup>(
+        offsets[2],
+        TagConditionGroupSchema.deserialize,
+        allOffsets,
+        TagConditionGroup(),
+      ) ??
+      [];
+  object.groupCombinator =
+      _TaggroupCombinatorValueEnumMap[reader.readByteOrNull(offsets[3])] ??
+          ConditionCombinator.and;
+  object.groupId = reader.readLong(offsets[4]);
   object.id = id;
   object.ignoreAndroidPerformanceRatings = reader
-          .readByteList(offsets[3])
+          .readByteList(offsets[5])
           ?.map((e) =>
               _TagignoreAndroidPerformanceRatingsValueEnumMap[e] ??
               PerformanceRatings.none)
           .toList() ??
       [];
   object.ignorePcPerformanceRatings = reader
-          .readByteList(offsets[4])
+          .readByteList(offsets[6])
           ?.map((e) =>
               _TagignorePcPerformanceRatingsValueEnumMap[e] ??
               PerformanceRatings.none)
           .toList() ??
       [];
-  object.inactiveColor = reader.readLong(offsets[5]);
-  object.invert = reader.readBool(offsets[6]);
-  object.name = reader.readString(offsets[7]);
-  object.order = reader.readLong(offsets[8]);
-  object.requireAndroid = reader.readBool(offsets[9]);
-  object.requirePc = reader.readBool(offsets[10]);
-  object.search = reader.readString(offsets[11]);
-  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[12])] ??
+  object.inactiveColor = reader.readLong(offsets[7]);
+  object.invert = reader.readBool(offsets[8]);
+  object.name = reader.readString(offsets[9]);
+  object.order = reader.readLong(offsets[10]);
+  object.requireAndroid = reader.readBool(offsets[11]);
+  object.requirePc = reader.readBool(offsets[12]);
+  object.search = reader.readString(offsets[13]);
+  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[14])] ??
       TagTarget.name;
   object.type =
-      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[13])] ?? TagType.items;
+      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[15])] ?? TagType.items;
   return object;
 }
 
@@ -202,8 +243,19 @@ P _tagDeserializeProp<P>(
     case 1:
       return (reader.readLong(offset)) as P;
     case 2:
-      return (reader.readLong(offset)) as P;
+      return (reader.readObjectList<TagConditionGroup>(
+            offset,
+            TagConditionGroupSchema.deserialize,
+            allOffsets,
+            TagConditionGroup(),
+          ) ??
+          []) as P;
     case 3:
+      return (_TaggroupCombinatorValueEnumMap[reader.readByteOrNull(offset)] ??
+          ConditionCombinator.and) as P;
+    case 4:
+      return (reader.readLong(offset)) as P;
+    case 5:
       return (reader
               .readByteList(offset)
               ?.map((e) =>
@@ -211,7 +263,7 @@ P _tagDeserializeProp<P>(
                   PerformanceRatings.none)
               .toList() ??
           []) as P;
-    case 4:
+    case 6:
       return (reader
               .readByteList(offset)
               ?.map((e) =>
@@ -219,24 +271,24 @@ P _tagDeserializeProp<P>(
                   PerformanceRatings.none)
               .toList() ??
           []) as P;
-    case 5:
-      return (reader.readLong(offset)) as P;
-    case 6:
-      return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
       return (reader.readLong(offset)) as P;
+    case 8:
+      return (reader.readBool(offset)) as P;
     case 9:
-      return (reader.readBool(offset)) as P;
-    case 10:
-      return (reader.readBool(offset)) as P;
-    case 11:
       return (reader.readString(offset)) as P;
+    case 10:
+      return (reader.readLong(offset)) as P;
+    case 11:
+      return (reader.readBool(offset)) as P;
     case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readString(offset)) as P;
+    case 14:
       return (_TagtargetValueEnumMap[reader.readByteOrNull(offset)] ??
           TagTarget.name) as P;
-    case 13:
+    case 15:
       return (_TagtypeValueEnumMap[reader.readByteOrNull(offset)] ??
           TagType.items) as P;
     default:
@@ -244,6 +296,14 @@ P _tagDeserializeProp<P>(
   }
 }
 
+const _TaggroupCombinatorEnumValueMap = {
+  'and': 0,
+  'or': 1,
+};
+const _TaggroupCombinatorValueEnumMap = {
+  0: ConditionCombinator.and,
+  1: ConditionCombinator.or,
+};
 const _TagignoreAndroidPerformanceRatingsEnumValueMap = {
   'none': 0,
   'excellent': 1,
@@ -279,20 +339,24 @@ const _TagignorePcPerformanceRatingsValueEnumMap = {
 const _TagtargetEnumValueMap = {
   'name': 0,
   'description': 1,
+  'nameOrDescription': 2,
 };
 const _TagtargetValueEnumMap = {
   0: TagTarget.name,
   1: TagTarget.description,
+  2: TagTarget.nameOrDescription,
 };
 const _TagtypeEnumValueMap = {
   'items': 0,
   'simple': 1,
   'regexp': 2,
+  'conditions': 3,
 };
 const _TagtypeValueEnumMap = {
   0: TagType.items,
   1: TagType.simple,
   2: TagType.regexp,
+  3: TagType.conditions,
 };
 
 Id _tagGetId(Tag object) {
@@ -439,6 +503,144 @@ extension TagQueryFilter on QueryBuilder<Tag, Tag, QFilterCondition> {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'color',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition>
+      conditionGroupsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'conditionGroups',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> groupCombinatorEqualTo(
+      ConditionCombinator value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'groupCombinator',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> groupCombinatorGreaterThan(
+    ConditionCombinator value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'groupCombinator',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> groupCombinatorLessThan(
+    ConditionCombinator value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'groupCombinator',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> groupCombinatorBetween(
+    ConditionCombinator lower,
+    ConditionCombinator upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'groupCombinator',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1335,7 +1537,14 @@ extension TagQueryFilter on QueryBuilder<Tag, Tag, QFilterCondition> {
   }
 }
 
-extension TagQueryObject on QueryBuilder<Tag, Tag, QFilterCondition> {}
+extension TagQueryObject on QueryBuilder<Tag, Tag, QFilterCondition> {
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> conditionGroupsElement(
+      FilterQuery<TagConditionGroup> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.object(q, r'conditionGroups');
+    });
+  }
+}
 
 extension TagQueryLinks on QueryBuilder<Tag, Tag, QFilterCondition> {
   QueryBuilder<Tag, Tag, QAfterFilterCondition> tagAvatars(
@@ -1417,6 +1626,18 @@ extension TagQuerySortBy on QueryBuilder<Tag, Tag, QSortBy> {
   QueryBuilder<Tag, Tag, QAfterSortBy> sortByColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'color', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterSortBy> sortByGroupCombinator() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupCombinator', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterSortBy> sortByGroupCombinatorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupCombinator', Sort.desc);
     });
   }
 
@@ -1566,6 +1787,18 @@ extension TagQuerySortThenBy on QueryBuilder<Tag, Tag, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QAfterSortBy> thenByGroupCombinator() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupCombinator', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterSortBy> thenByGroupCombinatorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupCombinator', Sort.desc);
+    });
+  }
+
   QueryBuilder<Tag, Tag, QAfterSortBy> thenByGroupId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'groupId', Sort.asc);
@@ -1712,6 +1945,12 @@ extension TagQueryWhereDistinct on QueryBuilder<Tag, Tag, QDistinct> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QDistinct> distinctByGroupCombinator() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'groupCombinator');
+    });
+  }
+
   QueryBuilder<Tag, Tag, QDistinct> distinctByGroupId() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'groupId');
@@ -1804,6 +2043,20 @@ extension TagQueryProperty on QueryBuilder<Tag, Tag, QQueryProperty> {
   QueryBuilder<Tag, int, QQueryOperations> colorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'color');
+    });
+  }
+
+  QueryBuilder<Tag, List<TagConditionGroup>, QQueryOperations>
+      conditionGroupsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'conditionGroups');
+    });
+  }
+
+  QueryBuilder<Tag, ConditionCombinator, QQueryOperations>
+      groupCombinatorProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'groupCombinator');
     });
   }
 

@@ -1,0 +1,1 @@
+enum ConditionMatchType { contains, regexp }

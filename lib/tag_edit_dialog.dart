@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vrc_avatar_manager/color_picker_dialog.dart';
+import 'package:vrc_avatar_manager/db/condition_combinator.dart';
 import 'package:vrc_avatar_manager/db/tag.dart';
+import 'package:vrc_avatar_manager/db/tag_condition.dart';
+import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
 import 'package:vrc_avatar_manager/db/tag_target.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
 import 'package:vrc_avatar_manager/performance_selector.dart';
 import 'package:vrc_avatar_manager/tag_button.dart';
+import 'package:vrc_avatar_manager/tag_condition_group_editor.dart';
 import 'package:vrc_avatar_manager/text_color_for.dart';
 import 'package:vrc_avatar_manager/vrc_icons.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
@@ -51,6 +55,8 @@ class _TagEditDialogState extends State<TagEditDialog> {
   final _searchController = TextEditingController();
   bool _invert = false;
   bool _caseSensitive = false;
+  ConditionCombinator _groupCombinator = ConditionCombinator.and;
+  List<TagConditionGroup> _conditionGroups = [];
   bool _showRequirements = false;
   bool _requirePc = false;
   bool _requireAndroid = false;
@@ -77,6 +83,18 @@ class _TagEditDialogState extends State<TagEditDialog> {
     _searchController.text = widget.tag.search;
     _invert = widget.tag.invert;
     _caseSensitive = widget.tag.caseSensitive;
+    _groupCombinator = widget.tag.groupCombinator;
+    _conditionGroups = widget.tag.conditionGroups
+        .map((g) => TagConditionGroup()
+          ..conditions = g.conditions
+              .map((c) => TagCondition()
+                ..target = c.target
+                ..matchType = c.matchType
+                ..search = c.search
+                ..invert = c.invert
+                ..caseSensitive = c.caseSensitive)
+              .toList())
+        .toList();
     _showRequirements = widget.tag.hasRequirements;
     _requirePc = widget.tag.requirePc;
     _requireAndroid = widget.tag.requireAndroid;
@@ -119,6 +137,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
                         TagType.items => "リスト",
                         TagType.simple => "文字列検索",
                         TagType.regexp => "正規表現検索",
+                        TagType.conditions => "条件検索",
                       })))
                   .toList(),
             ),
@@ -131,7 +150,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
               ),
               validator: (value) => value!.isEmpty ? 'Required' : null,
             ),
-            if (_type != TagType.items)
+            if (_type == TagType.simple || _type == TagType.regexp)
               DropdownButtonFormField<TagTarget>(
                 decoration: const InputDecoration(
                   labelText: '検索対象',
@@ -146,19 +165,20 @@ class _TagEditDialogState extends State<TagEditDialog> {
                     .map((e) => DropdownMenuItem(
                         value: e,
                         child: Text(switch (e) {
-                          TagTarget.name => "name",
-                          TagTarget.description => "description",
+                          TagTarget.name => "名前",
+                          TagTarget.description => "説明",
+                          TagTarget.nameOrDescription => "名前または説明",
                         })))
                     .toList(),
               ),
-            if (_type != TagType.items)
+            if (_type == TagType.simple || _type == TagType.regexp)
               TextFormField(
                 controller: _searchController,
                 decoration: const InputDecoration(
                   labelText: '検索文字列',
                 ),
               ),
-            if (_type != TagType.items)
+            if (_type == TagType.simple || _type == TagType.regexp)
               CheckboxListTile(
                 value: _invert,
                 onChanged: (value) {
@@ -168,7 +188,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
                 },
                 title: const Text("NOT条件"),
               ),
-            if (_type != TagType.items)
+            if (_type == TagType.simple || _type == TagType.regexp)
               CheckboxListTile(
                 value: _caseSensitive,
                 onChanged: (value) {
@@ -178,9 +198,23 @@ class _TagEditDialogState extends State<TagEditDialog> {
                 },
                 title: const Text("大文字小文字を区別する"),
               ),
+            if (_type == TagType.conditions)
+              TagConditionGroupEditor(
+                conditionGroups: _conditionGroups,
+                groupCombinator: _groupCombinator,
+                onGroupsChanged: (groups) {
+                  setState(() {
+                    _conditionGroups = groups;
+                  });
+                },
+                onCombinatorChanged: (combinator) {
+                  setState(() {
+                    _groupCombinator = combinator;
+                  });
+                },
+              ),
             const SizedBox(height: 8),
-            if (_type != TagType.items)
-              ExpansionTile(
+            if (_type != TagType.items) ExpansionTile(
                 title: const Text("必要パフォーマンス"),
                 initiallyExpanded: _showRequirements,
                 children: [
@@ -339,6 +373,8 @@ class _TagEditDialogState extends State<TagEditDialog> {
               ..search = _searchController.text
               ..invert = _invert
               ..caseSensitive = _caseSensitive
+              ..groupCombinator = _groupCombinator
+              ..conditionGroups = _conditionGroups
               ..requirePc = _requirePc
               ..requireAndroid = _requireAndroid
               ..ignorePcPerformanceRatings =

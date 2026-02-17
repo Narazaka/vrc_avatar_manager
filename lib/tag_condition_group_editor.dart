@@ -251,11 +251,11 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
                           value: e,
                           child: Text(
                             switch (e) {
-                              ConditionMatchType.contains => "部分一致",
-                              ConditionMatchType.startsWith => "前方一致",
-                              ConditionMatchType.endsWith => "後方一致",
-                              ConditionMatchType.exact => "完全一致",
-                              ConditionMatchType.regexp => "正規表現",
+                              ConditionMatchType.contains => "*...*  部分一致",
+                              ConditionMatchType.startsWith => "...*  前方一致",
+                              ConditionMatchType.endsWith => "*...  後方一致",
+                              ConditionMatchType.exact => "...  完全一致",
+                              ConditionMatchType.regexp => "/.../  正規表現",
                             },
                             style: const TextStyle(fontSize: 13),
                           )))

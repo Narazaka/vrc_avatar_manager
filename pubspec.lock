@@ -293,10 +293,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio_response_validator
-      sha256: "7d93c0c7ae7faf1cb94e2cdb25d7fd070c2f396d66c46d8113c81e9e26ad40c3"
+      sha256: "82ddb2e9371c6548037197e31d536c2f0800640de34dba094187df3a8c4ffe2b"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.5"
+    version: "0.3.1"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -1162,18 +1162,18 @@ packages:
     dependency: "direct main"
     description:
       name: vrchat_dart
-      sha256: "8c6fb075bcca730f7f968d4075eae67f0c0289cb6917f0b352a57386ba9dfa80"
+      sha256: "45adab0fc774fa0fc92721ecf1465ab9f148c1836e79bbcb9105b7790bcc5299"
       url: "https://pub.dev"
     source: hosted
-    version: "3.7.2"
+    version: "4.0.1"
   vrchat_dart_generated:
     dependency: transitive
     description:
       name: vrchat_dart_generated
-      sha256: db80b4fe0a4485c761ed200a641f0f1b624b808fd17a07fae840eeb97162bbd6
+      sha256: "8d8e584374cbb5eba35c1ebde6472080464cf795ba8f529f3680d2d6c2be2137"
       url: "https://pub.dev"
     source: hosted
-    version: "1.20.4"
+    version: "1.20.7"
   watcher:
     dependency: transitive
     description:

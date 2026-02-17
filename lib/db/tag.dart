@@ -279,19 +279,23 @@ class Tag {
       TagTarget.nameOrDescription => [avatar.name, avatar.avatar.description],
     };
     final filter = switch (cond.matchType) {
-      ConditionMatchType.contains => _conditionContainsFilter(cond),
+      ConditionMatchType.contains => _conditionStringFilter(cond, (s, q) => s.contains(q)),
+      ConditionMatchType.startsWith => _conditionStringFilter(cond, (s, q) => s.startsWith(q)),
+      ConditionMatchType.endsWith => _conditionStringFilter(cond, (s, q) => s.endsWith(q)),
+      ConditionMatchType.exact => _conditionStringFilter(cond, (s, q) => s == q),
       ConditionMatchType.regexp => _conditionRegexpFilter(cond),
     };
     final matched = fields.any(filter);
     return cond.invert ? !matched : matched;
   }
 
-  bool Function(String) _conditionContainsFilter(TagCondition cond) {
+  bool Function(String) _conditionStringFilter(
+      TagCondition cond, bool Function(String s, String query) matcher) {
     if (cond.caseSensitive) {
-      return (String s) => s.contains(cond.search);
+      return (String s) => matcher(s, cond.search);
     } else {
       var lowerSearch = cond.search.toLowerCase();
-      return (String s) => s.toLowerCase().contains(lowerSearch);
+      return (String s) => matcher(s.toLowerCase(), lowerSearch);
     }
   }
 

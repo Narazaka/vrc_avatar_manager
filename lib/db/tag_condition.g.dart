@@ -116,11 +116,17 @@ P _tagConditionDeserializeProp<P>(
 
 const _TagConditionmatchTypeEnumValueMap = {
   'contains': 0,
-  'regexp': 1,
+  'startsWith': 1,
+  'endsWith': 2,
+  'exact': 3,
+  'regexp': 4,
 };
 const _TagConditionmatchTypeValueEnumMap = {
   0: ConditionMatchType.contains,
-  1: ConditionMatchType.regexp,
+  1: ConditionMatchType.startsWith,
+  2: ConditionMatchType.endsWith,
+  3: ConditionMatchType.exact,
+  4: ConditionMatchType.regexp,
 };
 const _TagConditiontargetEnumValueMap = {
   'name': 0,

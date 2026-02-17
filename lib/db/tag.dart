@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:glob/glob.dart';
 import 'package:isar/isar.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/db/condition_combinator.dart';
@@ -302,12 +303,8 @@ class Tag {
 
   bool Function(String) _conditionWildcardFilter(TagCondition cond) {
     try {
-      final pattern = cond.search
-          .replaceAllMapped(RegExp(r'[.+^${}()|[\]\\]'), (m) => '\\${m[0]}')
-          .replaceAll('*', '.*')
-          .replaceAll('?', '.');
-      var regexp = RegExp('^$pattern\$', caseSensitive: cond.caseSensitive);
-      return (String s) => regexp.hasMatch(s);
+      var glob = Glob(cond.search, caseSensitive: cond.caseSensitive);
+      return (String s) => glob.matches(s);
     } catch (e) {
       print("wildcard error: $e");
       return (String s) => false;

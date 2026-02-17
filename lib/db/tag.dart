@@ -283,6 +283,7 @@ class Tag {
       ConditionMatchType.startsWith => _conditionStringFilter(cond, (s, q) => s.startsWith(q)),
       ConditionMatchType.endsWith => _conditionStringFilter(cond, (s, q) => s.endsWith(q)),
       ConditionMatchType.exact => _conditionStringFilter(cond, (s, q) => s == q),
+      ConditionMatchType.wildcard => _conditionWildcardFilter(cond),
       ConditionMatchType.regexp => _conditionRegexpFilter(cond),
     };
     final matched = fields.any(filter);
@@ -296,6 +297,20 @@ class Tag {
     } else {
       var lowerSearch = cond.search.toLowerCase();
       return (String s) => matcher(s.toLowerCase(), lowerSearch);
+    }
+  }
+
+  bool Function(String) _conditionWildcardFilter(TagCondition cond) {
+    try {
+      final pattern = cond.search
+          .replaceAllMapped(RegExp(r'[.+^${}()|[\]\\]'), (m) => '\\${m[0]}')
+          .replaceAll('*', '.*')
+          .replaceAll('?', '.');
+      var regexp = RegExp('^$pattern\$', caseSensitive: cond.caseSensitive);
+      return (String s) => regexp.hasMatch(s);
+    } catch (e) {
+      print("wildcard error: $e");
+      return (String s) => false;
     }
   }
 

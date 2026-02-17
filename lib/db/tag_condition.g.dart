@@ -119,14 +119,16 @@ const _TagConditionmatchTypeEnumValueMap = {
   'startsWith': 1,
   'endsWith': 2,
   'exact': 3,
-  'regexp': 4,
+  'wildcard': 4,
+  'regexp': 5,
 };
 const _TagConditionmatchTypeValueEnumMap = {
   0: ConditionMatchType.contains,
   1: ConditionMatchType.startsWith,
   2: ConditionMatchType.endsWith,
   3: ConditionMatchType.exact,
-  4: ConditionMatchType.regexp,
+  4: ConditionMatchType.wildcard,
+  5: ConditionMatchType.regexp,
 };
 const _TagConditiontargetEnumValueMap = {
   'name': 0,

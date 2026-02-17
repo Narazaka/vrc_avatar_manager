@@ -1,1 +1,1 @@
-enum ConditionMatchType { contains, startsWith, endsWith, exact, regexp }
+enum ConditionMatchType { contains, startsWith, endsWith, exact, wildcard, regexp }

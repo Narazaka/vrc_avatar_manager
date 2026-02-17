@@ -137,6 +137,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
                         TagType.items => "リスト",
                         TagType.simple => "文字列検索",
                         TagType.regexp => "正規表現検索",
+                        TagType.wildcard => "ワイルドカード検索",
                         TagType.conditions => "条件検索",
                       })))
                   .toList(),
@@ -150,7 +151,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
               ),
               validator: (value) => value!.isEmpty ? 'Required' : null,
             ),
-            if (_type == TagType.simple || _type == TagType.regexp)
+            if (_type == TagType.simple || _type == TagType.regexp || _type == TagType.wildcard)
               DropdownButtonFormField<TagTarget>(
                 decoration: const InputDecoration(
                   labelText: '検索対象',
@@ -171,14 +172,14 @@ class _TagEditDialogState extends State<TagEditDialog> {
                         })))
                     .toList(),
               ),
-            if (_type == TagType.simple || _type == TagType.regexp)
+            if (_type == TagType.simple || _type == TagType.regexp || _type == TagType.wildcard)
               TextFormField(
                 controller: _searchController,
                 decoration: const InputDecoration(
                   labelText: '検索文字列',
                 ),
               ),
-            if (_type == TagType.simple || _type == TagType.regexp)
+            if (_type == TagType.simple || _type == TagType.regexp || _type == TagType.wildcard)
               CheckboxListTile(
                 value: _invert,
                 onChanged: (value) {
@@ -188,7 +189,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
                 },
                 title: const Text("NOT条件"),
               ),
-            if (_type == TagType.simple || _type == TagType.regexp)
+            if (_type == TagType.simple || _type == TagType.regexp || _type == TagType.wildcard)
               CheckboxListTile(
                 value: _caseSensitive,
                 onChanged: (value) {

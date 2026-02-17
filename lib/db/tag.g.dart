@@ -350,13 +350,15 @@ const _TagtypeEnumValueMap = {
   'items': 0,
   'simple': 1,
   'regexp': 2,
-  'conditions': 3,
+  'wildcard': 3,
+  'conditions': 4,
 };
 const _TagtypeValueEnumMap = {
   0: TagType.items,
   1: TagType.simple,
   2: TagType.regexp,
-  3: TagType.conditions,
+  3: TagType.wildcard,
+  4: TagType.conditions,
 };
 
 Id _tagGetId(Tag object) {

@@ -157,6 +157,15 @@ class Tag {
         var pick = _genPick();
         var matches = _genRegexpFilter();
         return avatars.where((avatar) => pick(avatar).any(matches));
+      case TagType.wildcard:
+        final requirementsFilter = _genRequirementsFilter();
+        avatars = avatars.where(requirementsFilter);
+        if (search.isEmpty) {
+          return avatars;
+        }
+        var pick = _genPick();
+        var matches = _genWildcardFilter();
+        return avatars.where((avatar) => pick(avatar).any(matches));
       case TagType.conditions:
         final requirementsFilter = _genRequirementsFilter();
         avatars = avatars.where(requirementsFilter);
@@ -194,6 +203,18 @@ class Tag {
           : (String s) => regexp.hasMatch(s);
     } catch (e) {
       print("regexp error: $e");
+      return (String s) => false;
+    }
+  }
+
+  bool Function(String) _genWildcardFilter() {
+    try {
+      var glob = Glob(search, caseSensitive: caseSensitive);
+      return invert
+          ? (String s) => !glob.matches(s)
+          : (String s) => glob.matches(s);
+    } catch (e) {
+      print("wildcard error: $e");
       return (String s) => false;
     }
   }

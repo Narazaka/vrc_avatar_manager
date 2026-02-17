@@ -76,7 +76,7 @@ class AvatarView extends StatelessWidget {
         width: 200,
         height: 150,
         child: CachedNetworkImage(
-          imageUrl: avatar.thumbnailImageUrl,
+          imageUrl: avatar.thumbnailImageUrl ?? "",
           httpHeaders: {"user-agent": VrcApi.userAgentString},
           fadeOutDuration: const Duration(milliseconds: 200),
           fadeInDuration: const Duration(milliseconds: 200),

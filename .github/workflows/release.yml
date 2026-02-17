@@ -29,6 +29,7 @@ jobs:
           cache-key: "flutter-:os:-:channel:-:version:-:arch:"
           pub-cache-key: "flutter-pub:os:-:channel:-:version:-:arch:"
       - run: flutter pub get
+      - run: node ./patch/patch.js
       - run: flutter build windows
       - name: copy files
         run: |

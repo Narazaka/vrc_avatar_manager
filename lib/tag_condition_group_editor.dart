@@ -191,7 +191,15 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
               label: const Text('条件を追加'),
               onPressed: () {
                 setState(() {
-                  group.conditions.add(TagCondition());
+                  final newCond = TagCondition();
+                  if (group.conditions.isNotEmpty) {
+                    final prev = group.conditions.last;
+                    newCond.target = prev.target;
+                    newCond.matchType = prev.matchType;
+                    newCond.invert = prev.invert;
+                    newCond.caseSensitive = prev.caseSensitive;
+                  }
+                  group.conditions.add(newCond);
                 });
                 _notifyChanged();
               },

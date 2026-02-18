@@ -20,10 +20,12 @@ class TagEditDialog extends StatefulWidget {
       {super.key,
       required this.tag,
       required this.isNew,
-      required this.tagsDb});
+      required this.tagsDb,
+      required this.allTags});
   final Tag tag;
   final bool isNew;
   final TagsDb tagsDb;
+  final List<Tag> allTags;
 
   @override
   State<TagEditDialog> createState() => _TagEditDialogState();
@@ -32,12 +34,13 @@ class TagEditDialog extends StatefulWidget {
     BuildContext context,
     Tag tag,
     bool isNew,
-    TagsDb tagsDb,
-  ) async {
+    TagsDb tagsDb, {
+    List<Tag> allTags = const [],
+  }) async {
     return showDialog<String>(
       context: context,
       builder: (context) {
-        return TagEditDialog(tag: tag, isNew: isNew, tagsDb: tagsDb);
+        return TagEditDialog(tag: tag, isNew: isNew, tagsDb: tagsDb, allTags: allTags);
       },
     );
   }
@@ -213,6 +216,8 @@ class _TagEditDialogState extends State<TagEditDialog> {
                     _groupCombinator = combinator;
                   });
                 },
+                allTags: widget.allTags,
+                currentTagId: widget.tag.id,
               ),
             const SizedBox(height: 8),
             if (_type != TagType.items) ExpansionTile(

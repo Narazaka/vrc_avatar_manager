@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vrc_avatar_manager/db/condition_combinator.dart';
 import 'package:vrc_avatar_manager/db/condition_match_type.dart';
+import 'package:vrc_avatar_manager/db/tag.dart';
 import 'package:vrc_avatar_manager/db/tag_condition.dart';
 import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
 import 'package:vrc_avatar_manager/db/tag_target.dart';
@@ -12,12 +13,16 @@ class TagConditionGroupEditor extends StatefulWidget {
     required this.groupCombinator,
     required this.onGroupsChanged,
     required this.onCombinatorChanged,
+    required this.allTags,
+    required this.currentTagId,
   });
 
   final List<TagConditionGroup> conditionGroups;
   final ConditionCombinator groupCombinator;
   final void Function(List<TagConditionGroup>) onGroupsChanged;
   final void Function(ConditionCombinator) onCombinatorChanged;
+  final List<Tag> allTags;
+  final int currentTagId;
 
   @override
   State<TagConditionGroupEditor> createState() =>
@@ -197,8 +202,12 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
     );
   }
 
+  List<Tag> get _selectableTags =>
+      widget.allTags.where((t) => t.id != widget.currentTagId).toList();
+
   Widget _buildConditionRow(TagConditionGroup group, int ci) {
     final cond = group.conditions[ci];
+    final isMatchesTag = cond.matchType == ConditionMatchType.matchesTag;
     final controller = _getController(cond);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -207,37 +216,38 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
         children: [
           Row(
             children: [
-              Expanded(
-                flex: 3,
-                child: DropdownButtonFormField<TagTarget>(
-                  initialValue: cond.target,
-                  decoration: const InputDecoration(
-                    labelText: '対象',
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              if (!isMatchesTag)
+                Expanded(
+                  flex: 3,
+                  child: DropdownButtonFormField<TagTarget>(
+                    initialValue: cond.target,
+                    decoration: const InputDecoration(
+                      labelText: '対象',
+                      isDense: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    ),
+                    items: TagTarget.values
+                        .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(
+                              switch (e) {
+                                TagTarget.name => "名前",
+                                TagTarget.description => "説明",
+                                TagTarget.nameOrDescription => "名前または説明",
+                              },
+                              style: const TextStyle(fontSize: 13),
+                            )))
+                        .toList(),
+                    onChanged: (v) {
+                      cond.target = v!;
+                      _notifyChanged();
+                    },
                   ),
-                  items: TagTarget.values
-                      .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(
-                            switch (e) {
-                              TagTarget.name => "名前",
-                              TagTarget.description => "説明",
-                              TagTarget.nameOrDescription => "名前または説明",
-                            },
-                            style: const TextStyle(fontSize: 13),
-                          )))
-                      .toList(),
-                  onChanged: (v) {
-                    cond.target = v!;
-                    _notifyChanged();
-                  },
                 ),
-              ),
-              const SizedBox(width: 4),
+              if (!isMatchesTag) const SizedBox(width: 4),
               Expanded(
-                flex: 2,
+                flex: isMatchesTag ? 1 : 2,
                 child: DropdownButtonFormField<ConditionMatchType>(
                   initialValue: cond.matchType,
                   decoration: const InputDecoration(
@@ -257,12 +267,18 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
                               ConditionMatchType.exact => "...  完全一致",
                               ConditionMatchType.wildcard => "*?  ワイルドカード",
                               ConditionMatchType.regexp => "/.../  正規表現",
+                              ConditionMatchType.matchesTag => "タグ一致",
                             },
                             style: const TextStyle(fontSize: 13),
                           )))
                       .toList(),
                   onChanged: (v) {
-                    cond.matchType = v!;
+                    setState(() {
+                      cond.matchType = v!;
+                      if (v == ConditionMatchType.matchesTag) {
+                        cond.search = '';
+                      }
+                    });
                     _notifyChanged();
                   },
                 ),
@@ -273,19 +289,21 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    labelText: '検索文字列',
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  ),
-                  onChanged: (v) {
-                    cond.search = v;
-                    _notifyChanged();
-                  },
-                ),
+                child: isMatchesTag
+                    ? _buildTagSelector(cond)
+                    : TextFormField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: '検索文字列',
+                          isDense: true,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        ),
+                        onChanged: (v) {
+                          cond.search = v;
+                          _notifyChanged();
+                        },
+                      ),
               ),
               const SizedBox(width: 4),
               FilterChip(
@@ -298,17 +316,18 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
                   _notifyChanged();
                 },
               ),
-              FilterChip(
-                label: const Text('Aa', style: TextStyle(fontSize: 12)),
-                selected: cond.caseSensitive,
-                onSelected: (v) {
-                  setState(() {
-                    cond.caseSensitive = v;
-                  });
-                  _notifyChanged();
-                },
-                tooltip: '大文字小文字を区別',
-              ),
+              if (!isMatchesTag)
+                FilterChip(
+                  label: const Text('Aa', style: TextStyle(fontSize: 12)),
+                  selected: cond.caseSensitive,
+                  onSelected: (v) {
+                    setState(() {
+                      cond.caseSensitive = v;
+                    });
+                    _notifyChanged();
+                  },
+                  tooltip: '大文字小文字を区別',
+                ),
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline, size: 20),
                 onPressed: () {
@@ -324,6 +343,33 @@ class _TagConditionGroupEditorState extends State<TagConditionGroupEditor> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTagSelector(TagCondition cond) {
+    final tags = _selectableTags;
+    final selectedTagId = int.tryParse(cond.search);
+    return DropdownButtonFormField<int>(
+      value: tags.any((t) => t.id == selectedTagId) ? selectedTagId : null,
+      decoration: const InputDecoration(
+        labelText: '参照タグ',
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      ),
+      items: tags
+          .map((t) => DropdownMenuItem(
+              value: t.id,
+              child: Text(
+                t.name,
+                style: const TextStyle(fontSize: 13),
+              )))
+          .toList(),
+      onChanged: (v) {
+        setState(() {
+          cond.search = v?.toString() ?? '';
+        });
+        _notifyChanged();
+      },
     );
   }
 }

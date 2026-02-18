@@ -207,14 +207,14 @@ Tag _tagDeserialize(
           .readByteList(offsets[5])
           ?.map((e) =>
               _TagignoreAndroidPerformanceRatingsValueEnumMap[e] ??
-              PerformanceRatings.none)
+              PerformanceRatings.excellent)
           .toList() ??
       [];
   object.ignorePcPerformanceRatings = reader
           .readByteList(offsets[6])
           ?.map((e) =>
               _TagignorePcPerformanceRatingsValueEnumMap[e] ??
-              PerformanceRatings.none)
+              PerformanceRatings.excellent)
           .toList() ??
       [];
   object.inactiveColor = reader.readLong(offsets[7]);
@@ -260,7 +260,7 @@ P _tagDeserializeProp<P>(
               .readByteList(offset)
               ?.map((e) =>
                   _TagignoreAndroidPerformanceRatingsValueEnumMap[e] ??
-                  PerformanceRatings.none)
+                  PerformanceRatings.excellent)
               .toList() ??
           []) as P;
     case 6:
@@ -268,7 +268,7 @@ P _tagDeserializeProp<P>(
               .readByteList(offset)
               ?.map((e) =>
                   _TagignorePcPerformanceRatingsValueEnumMap[e] ??
-                  PerformanceRatings.none)
+                  PerformanceRatings.excellent)
               .toList() ??
           []) as P;
     case 7:
@@ -305,34 +305,34 @@ const _TaggroupCombinatorValueEnumMap = {
   1: ConditionCombinator.or,
 };
 const _TagignoreAndroidPerformanceRatingsEnumValueMap = {
-  'none': 0,
-  'excellent': 1,
-  'good': 2,
-  'medium': 3,
+  'excellent': 0,
+  'good': 1,
+  'medium': 2,
+  'none': 3,
   'poor': 4,
   'veryPoor': 5,
 };
 const _TagignoreAndroidPerformanceRatingsValueEnumMap = {
-  0: PerformanceRatings.none,
-  1: PerformanceRatings.excellent,
-  2: PerformanceRatings.good,
-  3: PerformanceRatings.medium,
+  0: PerformanceRatings.excellent,
+  1: PerformanceRatings.good,
+  2: PerformanceRatings.medium,
+  3: PerformanceRatings.none,
   4: PerformanceRatings.poor,
   5: PerformanceRatings.veryPoor,
 };
 const _TagignorePcPerformanceRatingsEnumValueMap = {
-  'none': 0,
-  'excellent': 1,
-  'good': 2,
-  'medium': 3,
+  'excellent': 0,
+  'good': 1,
+  'medium': 2,
+  'none': 3,
   'poor': 4,
   'veryPoor': 5,
 };
 const _TagignorePcPerformanceRatingsValueEnumMap = {
-  0: PerformanceRatings.none,
-  1: PerformanceRatings.excellent,
-  2: PerformanceRatings.good,
-  3: PerformanceRatings.medium,
+  0: PerformanceRatings.excellent,
+  1: PerformanceRatings.good,
+  2: PerformanceRatings.medium,
+  3: PerformanceRatings.none,
   4: PerformanceRatings.poor,
   5: PerformanceRatings.veryPoor,
 };

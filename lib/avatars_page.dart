@@ -11,6 +11,7 @@ import 'package:vrc_avatar_manager/db/avatar_package_information_db.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_v2.dart';
 import 'package:vrc_avatar_manager/db/tag.dart';
+import 'package:vrc_avatar_manager/db/tag_filter_context.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
 import 'package:vrc_avatar_manager/imposter.dart';
@@ -669,8 +670,9 @@ class _AvatarsPageState extends State<AvatarsPage> {
 
   Iterable<AvatarWithStat> get _filteredAvatars {
     Iterable<AvatarWithStat> avatars = _sortedAvatars;
+    final context = TagFilterContext(allTags: _tags, allAvatars: _sortedAvatars);
     for (var tag in _selectedTags) {
-      avatars = tag.filterAvatars(avatars);
+      avatars = tag.filterAvatars(avatars, context: context);
     }
     if (_isPlatformSelected[0]) {
       avatars = avatars.where((avatar) => avatar.hasPc);
@@ -903,7 +905,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
                   if (!_tagsDbLoaded) {
                     return;
                   }
-                  TagEditDialog.show(context, Tag()..empty(), true, _tagsDb);
+                  TagEditDialog.show(context, Tag()..empty(), true, _tagsDb, allTags: _tags);
                 },
                 icon: const Icon(Icons.add))),
         Tooltip(
@@ -977,7 +979,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
               if (_editTags)
                 TagCompanionButton(
                   onPressed: () {
-                    TagEditDialog.show(context, tag, false, _tagsDb);
+                    TagEditDialog.show(context, tag, false, _tagsDb, allTags: _tags);
                   },
                   icon: const Icon(Icons.settings),
                 ),

@@ -8,6 +8,7 @@ import 'package:vrc_avatar_manager/db/tag_avatar.dart';
 import 'package:vrc_avatar_manager/db/tag_condition.dart';
 import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
 import 'package:vrc_avatar_manager/db/tag_target.dart';
+import 'package:vrc_avatar_manager/db/tag_filter_context.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:collection/collection.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
@@ -134,7 +135,7 @@ class Tag {
     await tagsDb.putLinkedAll(this, targetTagAvatars);
   }
 
-  Iterable<AvatarWithStat> filterAvatars(Iterable<AvatarWithStat> avatars) {
+  Iterable<AvatarWithStat> filterAvatars(Iterable<AvatarWithStat> avatars, {TagFilterContext? context}) {
     switch (type) {
       case TagType.items:
         var ids = avatarIds;
@@ -170,7 +171,7 @@ class Tag {
         final requirementsFilter = _genRequirementsFilter();
         avatars = avatars.where(requirementsFilter);
         if (conditionGroups.isEmpty) return avatars;
-        return avatars.where((avatar) => _matchesConditions(avatar));
+        return avatars.where((avatar) => _matchesConditions(avatar, context));
     }
   }
 
@@ -273,28 +274,36 @@ class Tag {
 
   // --- conditions matching ---
 
-  bool _matchesConditions(AvatarWithStat avatar) {
+  bool _matchesConditions(AvatarWithStat avatar, TagFilterContext? context) {
     switch (groupCombinator) {
       case ConditionCombinator.and:
         // CNF: all groups must pass, within each group any condition passes (OR)
-        return conditionGroups.every((group) => _matchesGroupOr(avatar, group));
+        return conditionGroups.every((group) => _matchesGroupOr(avatar, group, context));
       case ConditionCombinator.or:
         // DNF: any group must pass, within each group all conditions pass (AND)
-        return conditionGroups.any((group) => _matchesGroupAnd(avatar, group));
+        return conditionGroups.any((group) => _matchesGroupAnd(avatar, group, context));
     }
   }
 
-  bool _matchesGroupOr(AvatarWithStat avatar, TagConditionGroup group) {
+  bool _matchesGroupOr(AvatarWithStat avatar, TagConditionGroup group, TagFilterContext? context) {
     if (group.conditions.isEmpty) return true;
-    return group.conditions.any((cond) => _matchesCondition(avatar, cond));
+    return group.conditions.any((cond) => _matchesCondition(avatar, cond, context));
   }
 
-  bool _matchesGroupAnd(AvatarWithStat avatar, TagConditionGroup group) {
+  bool _matchesGroupAnd(AvatarWithStat avatar, TagConditionGroup group, TagFilterContext? context) {
     if (group.conditions.isEmpty) return true;
-    return group.conditions.every((cond) => _matchesCondition(avatar, cond));
+    return group.conditions.every((cond) => _matchesCondition(avatar, cond, context));
   }
 
-  bool _matchesCondition(AvatarWithStat avatar, TagCondition cond) {
+  bool _matchesCondition(AvatarWithStat avatar, TagCondition cond, TagFilterContext? context) {
+    if (cond.matchType == ConditionMatchType.matchesTag) {
+      final tagId = int.tryParse(cond.search);
+      if (tagId == null || context == null) return cond.invert;
+      final matchedIds = context.resolveTagMatchSet(tagId);
+      final matched = matchedIds.contains(avatar.id);
+      return cond.invert ? !matched : matched;
+    }
+
     final fields = switch (cond.target) {
       TagTarget.name => [avatar.name],
       TagTarget.description => [avatar.avatar.description],
@@ -307,6 +316,7 @@ class Tag {
       ConditionMatchType.exact => _conditionStringFilter(cond, (s, q) => s == q),
       ConditionMatchType.wildcard => _conditionWildcardFilter(cond),
       ConditionMatchType.regexp => _conditionRegexpFilter(cond),
+      ConditionMatchType.matchesTag => throw StateError('unreachable'),
     };
     final matched = fields.any(filter);
     return cond.invert ? !matched : matched;

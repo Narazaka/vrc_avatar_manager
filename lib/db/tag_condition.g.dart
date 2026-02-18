@@ -121,6 +121,7 @@ const _TagConditionmatchTypeEnumValueMap = {
   'exact': 3,
   'wildcard': 4,
   'regexp': 5,
+  'matchesTag': 6,
 };
 const _TagConditionmatchTypeValueEnumMap = {
   0: ConditionMatchType.contains,
@@ -129,6 +130,7 @@ const _TagConditionmatchTypeValueEnumMap = {
   3: ConditionMatchType.exact,
   4: ConditionMatchType.wildcard,
   5: ConditionMatchType.regexp,
+  6: ConditionMatchType.matchesTag,
 };
 const _TagConditiontargetEnumValueMap = {
   'name': 0,

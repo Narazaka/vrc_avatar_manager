@@ -12,6 +12,7 @@ import 'package:vrc_avatar_manager/db/tag_filter_context.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:collection/collection.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
+import 'package:vrc_avatar_manager/imposter.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
 
 part 'tag.g.dart';
@@ -46,9 +47,14 @@ class Tag {
       ignorePcPerformanceRatings.isNotEmpty ||
       ignoreAndroidPerformanceRatings.isNotEmpty;
 
+  @enumerated
+  FilterByImposter imposter = FilterByImposter.none;
+
   @ignore
   bool get hasRequirements =>
-      hasPlatformRequirements || hasPerformanceRequirements;
+      hasPlatformRequirements ||
+      hasPerformanceRequirements ||
+      imposter != FilterByImposter.none;
 
   late String name;
 
@@ -101,9 +107,24 @@ class Tag {
     type = TagType.items;
     target = TagTarget.name;
     search = "";
+    invert = false;
     caseSensitive = false;
     groupCombinator = ConditionCombinator.and;
     conditionGroups = [];
+    requirePc = false;
+    requireAndroid = false;
+    ignorePcPerformanceRatings = [];
+    ignoreAndroidPerformanceRatings = [];
+    imposter = FilterByImposter.none;
+  }
+
+  void copyRequirementsFrom(Tag other) {
+    requirePc = other.requirePc;
+    requireAndroid = other.requireAndroid;
+    ignorePcPerformanceRatings = other.ignorePcPerformanceRatings.toList();
+    ignoreAndroidPerformanceRatings =
+        other.ignoreAndroidPerformanceRatings.toList();
+    imposter = other.imposter;
   }
 
   Future<void> toggleAvatar(String avatarId, TagsDb tagsDb) async {
@@ -221,55 +242,29 @@ class Tag {
   }
 
   bool Function(AvatarWithStat) _genRequirementsFilter() {
-    if (!hasRequirements) {
-      return (AvatarWithStat avatar) => true;
-    }
-    var platformFilter = _genPlatformRequirementsFilter();
-    var performanceFilter = _genPerformanceRequirementsFilter();
-    if (platformFilter != null && performanceFilter != null) {
-      return (AvatarWithStat avatar) =>
-          platformFilter(avatar) && performanceFilter(avatar);
-    } else if (platformFilter != null) {
-      return platformFilter;
-    } else {
-      return performanceFilter!;
-    }
-  }
-
-  bool Function(AvatarWithStat)? _genPlatformRequirementsFilter() {
-    if (!hasPlatformRequirements) {
-      return null;
-    }
-    if (requirePc && requireAndroid) {
-      return (AvatarWithStat avatar) => avatar.hasCrossPlatform;
-    } else if (requirePc) {
-      return (AvatarWithStat avatar) => avatar.hasPc;
-    } else {
-      return (AvatarWithStat avatar) => avatar.hasAndroid;
-    }
-  }
-
-  bool Function(AvatarWithStat)? _genPerformanceRequirementsFilter() {
-    if (!hasPerformanceRequirements) {
-      return null;
-    }
-    var ignorePc = ignorePcPerformanceRatings.toSet();
-    var ignoreAndroid = ignoreAndroidPerformanceRatings.toSet();
-    if (ignorePc.isNotEmpty && ignoreAndroid.isNotEmpty) {
-      return (AvatarWithStat avatar) =>
-          (avatar.pc.performanceRating == null ||
-              !ignorePc.contains(avatar.pc.performanceRating)) &&
-          (avatar.android.performanceRating == null ||
-              !ignoreAndroid.contains(avatar.android.performanceRating));
-    } else if (ignorePc.isNotEmpty) {
-      return (AvatarWithStat avatar) =>
-          avatar.pc.performanceRating == null ||
-          !ignorePc.contains(avatar.pc.performanceRating);
-    } else {
-      return (AvatarWithStat avatar) =>
-          avatar.android.performanceRating == null ||
-          !ignoreAndroid.contains(avatar.android.performanceRating);
-    }
+    final ignorePc = ignorePcPerformanceRatings.toSet();
+    final ignoreAndroid = ignoreAndroidPerformanceRatings.toSet();
+    final filters = <bool Function(AvatarWithStat)>[
+      if (requirePc && requireAndroid)
+        (avatar) => avatar.hasCrossPlatform
+      else if (requirePc)
+        (avatar) => avatar.hasPc
+      else if (requireAndroid)
+        (avatar) => avatar.hasAndroid,
+      if (ignorePc.isNotEmpty)
+        (avatar) =>
+            avatar.pc.performanceRating == null ||
+            !ignorePc.contains(avatar.pc.performanceRating),
+      if (ignoreAndroid.isNotEmpty)
+        (avatar) =>
+            avatar.android.performanceRating == null ||
+            !ignoreAndroid.contains(avatar.android.performanceRating),
+      if (imposter == FilterByImposter.haveImposter)
+        (avatar) => avatar.hasImpostor
+      else if (imposter == FilterByImposter.notHaveImposter)
+        (avatar) => !avatar.hasImpostor,
+    ];
+    return (avatar) => filters.every((f) => f(avatar));
   }
 
   // --- conditions matching ---

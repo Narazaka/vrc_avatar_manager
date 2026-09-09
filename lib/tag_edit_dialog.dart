@@ -8,12 +8,10 @@ import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
 import 'package:vrc_avatar_manager/db/tag_target.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
-import 'package:vrc_avatar_manager/performance_selector.dart';
 import 'package:vrc_avatar_manager/tag_button.dart';
 import 'package:vrc_avatar_manager/tag_condition_group_editor.dart';
+import 'package:vrc_avatar_manager/tag_requirements_editor.dart';
 import 'package:vrc_avatar_manager/text_color_for.dart';
-import 'package:vrc_avatar_manager/vrc_icons.dart';
-import 'package:vrchat_dart/vrchat_dart.dart';
 
 class TagEditDialog extends StatefulWidget {
   const TagEditDialog(
@@ -61,10 +59,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
   ConditionCombinator _groupCombinator = ConditionCombinator.and;
   List<TagConditionGroup> _conditionGroups = [];
   bool _showRequirements = false;
-  bool _requirePc = false;
-  bool _requireAndroid = false;
-  Set<PerformanceRatings> _ignorePcPerformanceRatings = {};
-  Set<PerformanceRatings> _ignoreAndroidPerformanceRatings = {};
+  final Tag _requirements = Tag()..empty();
 
   @override
   void dispose() {
@@ -99,11 +94,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
               .toList())
         .toList();
     _showRequirements = widget.tag.hasRequirements;
-    _requirePc = widget.tag.requirePc;
-    _requireAndroid = widget.tag.requireAndroid;
-    _ignorePcPerformanceRatings = widget.tag.ignorePcPerformanceRatings.toSet();
-    _ignoreAndroidPerformanceRatings =
-        widget.tag.ignoreAndroidPerformanceRatings.toSet();
+    _requirements.copyRequirementsFrom(widget.tag);
   }
 
   @override
@@ -224,86 +215,9 @@ class _TagEditDialogState extends State<TagEditDialog> {
                 title: const Text("必要パフォーマンス"),
                 initiallyExpanded: _showRequirements,
                 children: [
-                  ToggleButtons(
-                    isSelected: [
-                      _requirePc && !_requireAndroid,
-                      !_requirePc && _requireAndroid,
-                      _requirePc && _requireAndroid,
-                    ],
-                    onPressed: (int index) {
-                      setState(() {
-                        switch (index) {
-                          case 0:
-                            if (_requirePc && !_requireAndroid) {
-                              _requirePc = false;
-                            } else {
-                              _requirePc = true;
-                              _requireAndroid = false;
-                            }
-                            break;
-                          case 1:
-                            if (!_requirePc && _requireAndroid) {
-                              _requireAndroid = false;
-                            } else {
-                              _requirePc = false;
-                              _requireAndroid = true;
-                            }
-                            break;
-                          case 2:
-                            if (_requirePc && _requireAndroid) {
-                              _requirePc = false;
-                              _requireAndroid = false;
-                            } else {
-                              _requirePc = true;
-                              _requireAndroid = true;
-                            }
-                            break;
-                        }
-                      });
-                    },
-                    children: [
-                      Tooltip(message: "PC対応アバターを表示", child: VrcIcons.pc),
-                      Tooltip(
-                          message: "Android対応アバターを表示", child: VrcIcons.android),
-                      Tooltip(
-                          message: "PC/Android両対応アバターを表示",
-                          child: VrcIcons.crossPlatform),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      VrcIcons.pc,
-                      PerformanceRankSelector(
-                          selected: PerformanceRatings.values
-                              .toSet()
-                              .difference(_ignorePcPerformanceRatings),
-                          onChanged: (p) {
-                            setState(() {
-                              _ignorePcPerformanceRatings.contains(p)
-                                  ? _ignorePcPerformanceRatings.remove(p)
-                                  : _ignorePcPerformanceRatings.add(p);
-                            });
-                          })
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      VrcIcons.android,
-                      PerformanceRankSelector(
-                          selected: PerformanceRatings.values
-                              .toSet()
-                              .difference(_ignoreAndroidPerformanceRatings),
-                          onChanged: (p) {
-                            setState(() {
-                              _ignoreAndroidPerformanceRatings.contains(p)
-                                  ? _ignoreAndroidPerformanceRatings.remove(p)
-                                  : _ignoreAndroidPerformanceRatings.add(p);
-                            });
-                          })
-                    ],
+                  TagRequirementsEditor(
+                    tag: _requirements,
+                    onChanged: () => setState(() {}),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -381,12 +295,7 @@ class _TagEditDialogState extends State<TagEditDialog> {
               ..caseSensitive = _caseSensitive
               ..groupCombinator = _groupCombinator
               ..conditionGroups = _conditionGroups
-              ..requirePc = _requirePc
-              ..requireAndroid = _requireAndroid
-              ..ignorePcPerformanceRatings =
-                  _ignorePcPerformanceRatings.toList()
-              ..ignoreAndroidPerformanceRatings =
-                  _ignoreAndroidPerformanceRatings.toList();
+              ..copyRequirementsFrom(_requirements);
             await widget.tagsDb.put(widget.tag);
 
             Navigator.of(context).pop();

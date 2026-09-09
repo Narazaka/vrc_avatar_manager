@@ -13,14 +13,15 @@ import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_v2.dart';
 import 'package:vrc_avatar_manager/db/tag.dart';
 import 'package:vrc_avatar_manager/db/tag_filter_context.dart';
+import 'package:vrc_avatar_manager/requirement_selectors.dart';
+import 'package:vrc_avatar_manager/search_condition_dialog.dart';
+import 'package:vrc_avatar_manager/db/tag_target.dart';
 import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
-import 'package:vrc_avatar_manager/imposter.dart';
 import 'package:vrc_avatar_manager/order_dialog.dart';
 import 'package:vrc_avatar_manager/performance_selector.dart';
 import 'package:vrc_avatar_manager/prefs.dart';
 import 'package:vrc_avatar_manager/setting_dialog.dart';
-import 'package:vrc_avatar_manager/small_icon_button.dart';
 import 'package:vrc_avatar_manager/vrc_osc.dart';
 import 'package:vrc_avatar_manager/wrap_with_height.dart';
 import 'package:vrc_avatar_manager/sort_by.dart';
@@ -78,14 +79,22 @@ class _AvatarsPageState extends State<AvatarsPage> {
   bool _showNotHaveImposter = false;
   bool _showTags = false;
   bool _multiLineTagsView = false;
-  FilterByImposter _filterByImposter = FilterByImposter.none;
 
   double _tagsHeight = 50;
 
-  final Set<PerformanceRatings> _pcPerformanceBlocks = {};
-  final Set<PerformanceRatings> _androidPerformanceBlocks = {};
-  String _search = "";
-  final List<bool> _isPlatformSelected = [false, false, false];
+  final Tag _searchTag = Tag()
+    ..empty()
+    ..type = TagType.simple;
+  final Tag _filterTag = Tag()
+    ..empty()
+    ..type = TagType.conditions;
+
+  bool get _hasDetailConditions =>
+      _filterTag.conditionGroups.isNotEmpty ||
+      _searchTag.type != TagType.simple ||
+      _searchTag.target != TagTarget.name ||
+      _searchTag.invert ||
+      _searchTag.caseSensitive;
   final Set<int> _selectedTagIds = {};
   List<Tag> _tags = [];
   Iterable<Tag> get _selectedTags =>
@@ -739,39 +748,19 @@ class _AvatarsPageState extends State<AvatarsPage> {
     );
   }
 
+  static void _toggle<T>(List<T> list, T value) {
+    list.contains(value) ? list.remove(value) : list.add(value);
+  }
+
   Iterable<AvatarWithStat> get _filteredAvatars {
     Iterable<AvatarWithStat> avatars = _sortedAvatars;
     final context = TagFilterContext(allTags: _tags, allAvatars: _sortedAvatars);
     for (var tag in _selectedTags) {
       avatars = tag.filterAvatars(avatars, context: context);
     }
-    if (_isPlatformSelected[0]) {
-      avatars = avatars.where((avatar) => avatar.hasPc);
-    } else if (_isPlatformSelected[1]) {
-      avatars = avatars.where((avatar) => avatar.hasAndroid);
-    } else if (_isPlatformSelected[2]) {
-      avatars = avatars.where((avatar) => avatar.hasCrossPlatform);
-    }
-    if (_pcPerformanceBlocks.isNotEmpty) {
-      avatars = avatars.where((avatar) =>
-          avatar.pc.performanceRating == null ||
-          !_pcPerformanceBlocks.contains(avatar.pc.performanceRating));
-    }
-    if (_androidPerformanceBlocks.isNotEmpty) {
-      avatars = avatars.where((avatar) =>
-          avatar.android.performanceRating == null ||
-          !_androidPerformanceBlocks
-              .contains(avatar.android.performanceRating));
-    }
-    if (_filterByImposter == FilterByImposter.haveImposter) {
-      avatars = avatars.where((avatar) => avatar.hasImpostor);
-    } else if (_filterByImposter == FilterByImposter.notHaveImposter) {
-      avatars = avatars.where((avatar) => !avatar.hasImpostor);
-    }
-    if (_search.isNotEmpty) {
-      var search = _search.toLowerCase();
-      avatars =
-          avatars.where((avatar) => avatar.name.toLowerCase().contains(search));
+    avatars = _filterTag.filterAvatars(avatars, context: context);
+    if (_searchTag.search.isNotEmpty) {
+      avatars = _searchTag.filterAvatars(avatars);
     }
     return avatars;
   }
@@ -851,82 +840,25 @@ class _AvatarsPageState extends State<AvatarsPage> {
       PerformanceRankSelector(
           selected: PerformanceRatings.values
               .toSet()
-              .difference(_pcPerformanceBlocks),
-          onChanged: (p) {
-            setState(() {
-              if (_pcPerformanceBlocks.contains(p)) {
-                _pcPerformanceBlocks.remove(p);
-              } else {
-                _pcPerformanceBlocks.add(p);
-              }
-            });
-          }),
+              .difference(_filterTag.ignorePcPerformanceRatings.toSet()),
+          onChanged: (p) => setState(() => _toggle(_filterTag.ignorePcPerformanceRatings, p))),
       VrcIcons.android,
       PerformanceRankSelector(
           selected: PerformanceRatings.values
               .toSet()
-              .difference(_androidPerformanceBlocks),
-          onChanged: (p) {
-            setState(() {
-              if (_androidPerformanceBlocks.contains(p)) {
-                _androidPerformanceBlocks.remove(p);
-              } else {
-                _androidPerformanceBlocks.add(p);
-              }
-            });
-          }),
-      ToggleButtons(
-        isSelected: _isPlatformSelected,
-        onPressed: (int index) {
-          setState(() {
-            for (var buttonIndex = 0;
-                buttonIndex < _isPlatformSelected.length;
-                buttonIndex++) {
-              if (buttonIndex == index) {
-                _isPlatformSelected[buttonIndex] =
-                    !_isPlatformSelected[buttonIndex];
-              } else {
-                _isPlatformSelected[buttonIndex] = false;
-              }
-            }
-          });
-        },
-        children: [
-          Tooltip(message: "PC対応アバターを表示", child: VrcIcons.pc),
-          Tooltip(message: "Android対応アバターを表示", child: VrcIcons.android),
-          Tooltip(
-              message: "PC/Android両対応アバターを表示", child: VrcIcons.crossPlatform),
-        ],
+              .difference(_filterTag.ignoreAndroidPerformanceRatings.toSet()),
+          onChanged: (p) => setState(() => _toggle(_filterTag.ignoreAndroidPerformanceRatings, p))),
+      PlatformRequirementSelector(
+        requirePc: _filterTag.requirePc,
+        requireAndroid: _filterTag.requireAndroid,
+        onChanged: (pc, android) => setState(() {
+          _filterTag.requirePc = pc;
+          _filterTag.requireAndroid = android;
+        }),
       ),
-      Tooltip(
-        message: "Imposterありのアバターを表示",
-        child: SmallIconButton(
-            icon: _filterByImposter == FilterByImposter.haveImposter
-                ? hasImposterBadge
-                : hasImposterInactiveBadge,
-            onPressed: () {
-              setState(() {
-                _filterByImposter =
-                    _filterByImposter == FilterByImposter.haveImposter
-                        ? FilterByImposter.none
-                        : FilterByImposter.haveImposter;
-              });
-            }),
-      ),
-      Tooltip(
-        message: "Imposterなしのアバターを表示",
-        child: SmallIconButton(
-            icon: _filterByImposter == FilterByImposter.notHaveImposter
-                ? noImposterBadge
-                : noImposterInactiveBadge,
-            onPressed: () {
-              setState(() {
-                _filterByImposter =
-                    _filterByImposter == FilterByImposter.notHaveImposter
-                        ? FilterByImposter.none
-                        : FilterByImposter.notHaveImposter;
-              });
-            }),
+      ImposterSelector(
+        value: _filterTag.imposter,
+        onChanged: (v) => setState(() => _filterTag.imposter = v),
       ),
       const SizedBox(width: 8),
       SizedBox(
@@ -944,14 +876,22 @@ class _AvatarsPageState extends State<AvatarsPage> {
               onPressed: () {
                 _searchController.clear();
                 setState(() {
-                  _search = "";
+                  _searchTag.search = "";
                 });
               },
             ),
           ),
           onChanged: (value) => setState(() {
-            _search = value;
+            _searchTag.search = value;
           }),
+        ),
+      ),
+      Tooltip(
+        message: "詳細検索",
+        child: (_hasDetailConditions ? IconButton.filled : IconButton.new)(
+          icon: const Icon(Icons.manage_search),
+          onPressed: () => SearchConditionDialog.show(
+              context, _searchTag, _filterTag, _tags, () => setState(() {})),
         ),
       ),
       const SizedBox(width: 8),

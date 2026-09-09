@@ -56,49 +56,55 @@ const TagSchema = CollectionSchema(
       type: IsarType.byteList,
       enumMap: _TagignorePcPerformanceRatingsEnumValueMap,
     ),
-    r'inactiveColor': PropertySchema(
+    r'imposter': PropertySchema(
       id: 7,
+      name: r'imposter',
+      type: IsarType.byte,
+      enumMap: _TagimposterEnumValueMap,
+    ),
+    r'inactiveColor': PropertySchema(
+      id: 8,
       name: r'inactiveColor',
       type: IsarType.long,
     ),
     r'invert': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'invert',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'name',
       type: IsarType.string,
     ),
     r'order': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'order',
       type: IsarType.long,
     ),
     r'requireAndroid': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'requireAndroid',
       type: IsarType.bool,
     ),
     r'requirePc': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'requirePc',
       type: IsarType.bool,
     ),
     r'search': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'search',
       type: IsarType.string,
     ),
     r'target': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'target',
       type: IsarType.byte,
       enumMap: _TagtargetEnumValueMap,
     ),
     r'type': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TagtypeEnumValueMap,
@@ -171,15 +177,16 @@ void _tagSerialize(
       object.ignoreAndroidPerformanceRatings.map((e) => e.index).toList());
   writer.writeByteList(offsets[6],
       object.ignorePcPerformanceRatings.map((e) => e.index).toList());
-  writer.writeLong(offsets[7], object.inactiveColor);
-  writer.writeBool(offsets[8], object.invert);
-  writer.writeString(offsets[9], object.name);
-  writer.writeLong(offsets[10], object.order);
-  writer.writeBool(offsets[11], object.requireAndroid);
-  writer.writeBool(offsets[12], object.requirePc);
-  writer.writeString(offsets[13], object.search);
-  writer.writeByte(offsets[14], object.target.index);
-  writer.writeByte(offsets[15], object.type.index);
+  writer.writeByte(offsets[7], object.imposter.index);
+  writer.writeLong(offsets[8], object.inactiveColor);
+  writer.writeBool(offsets[9], object.invert);
+  writer.writeString(offsets[10], object.name);
+  writer.writeLong(offsets[11], object.order);
+  writer.writeBool(offsets[12], object.requireAndroid);
+  writer.writeBool(offsets[13], object.requirePc);
+  writer.writeString(offsets[14], object.search);
+  writer.writeByte(offsets[15], object.target.index);
+  writer.writeByte(offsets[16], object.type.index);
 }
 
 Tag _tagDeserialize(
@@ -217,17 +224,20 @@ Tag _tagDeserialize(
               PerformanceRatings.excellent)
           .toList() ??
       [];
-  object.inactiveColor = reader.readLong(offsets[7]);
-  object.invert = reader.readBool(offsets[8]);
-  object.name = reader.readString(offsets[9]);
-  object.order = reader.readLong(offsets[10]);
-  object.requireAndroid = reader.readBool(offsets[11]);
-  object.requirePc = reader.readBool(offsets[12]);
-  object.search = reader.readString(offsets[13]);
-  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[14])] ??
+  object.imposter =
+      _TagimposterValueEnumMap[reader.readByteOrNull(offsets[7])] ??
+          FilterByImposter.none;
+  object.inactiveColor = reader.readLong(offsets[8]);
+  object.invert = reader.readBool(offsets[9]);
+  object.name = reader.readString(offsets[10]);
+  object.order = reader.readLong(offsets[11]);
+  object.requireAndroid = reader.readBool(offsets[12]);
+  object.requirePc = reader.readBool(offsets[13]);
+  object.search = reader.readString(offsets[14]);
+  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[15])] ??
       TagTarget.name;
   object.type =
-      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[15])] ?? TagType.items;
+      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[16])] ?? TagType.items;
   return object;
 }
 
@@ -272,23 +282,26 @@ P _tagDeserializeProp<P>(
               .toList() ??
           []) as P;
     case 7:
-      return (reader.readLong(offset)) as P;
+      return (_TagimposterValueEnumMap[reader.readByteOrNull(offset)] ??
+          FilterByImposter.none) as P;
     case 8:
-      return (reader.readBool(offset)) as P;
-    case 9:
-      return (reader.readString(offset)) as P;
-    case 10:
       return (reader.readLong(offset)) as P;
-    case 11:
+    case 9:
       return (reader.readBool(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readLong(offset)) as P;
     case 12:
       return (reader.readBool(offset)) as P;
     case 13:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 14:
+      return (reader.readString(offset)) as P;
+    case 15:
       return (_TagtargetValueEnumMap[reader.readByteOrNull(offset)] ??
           TagTarget.name) as P;
-    case 15:
+    case 16:
       return (_TagtypeValueEnumMap[reader.readByteOrNull(offset)] ??
           TagType.items) as P;
     default:
@@ -335,6 +348,16 @@ const _TagignorePcPerformanceRatingsValueEnumMap = {
   3: PerformanceRatings.none,
   4: PerformanceRatings.poor,
   5: PerformanceRatings.veryPoor,
+};
+const _TagimposterEnumValueMap = {
+  'none': 0,
+  'haveImposter': 1,
+  'notHaveImposter': 2,
+};
+const _TagimposterValueEnumMap = {
+  0: FilterByImposter.none,
+  1: FilterByImposter.haveImposter,
+  2: FilterByImposter.notHaveImposter,
 };
 const _TagtargetEnumValueMap = {
   'name': 0,
@@ -1045,6 +1068,59 @@ extension TagQueryFilter on QueryBuilder<Tag, Tag, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> imposterEqualTo(
+      FilterByImposter value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'imposter',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> imposterGreaterThan(
+    FilterByImposter value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'imposter',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> imposterLessThan(
+    FilterByImposter value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'imposter',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> imposterBetween(
+    FilterByImposter lower,
+    FilterByImposter upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'imposter',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Tag, Tag, QAfterFilterCondition> inactiveColorEqualTo(
       int value) {
     return QueryBuilder.apply(this, (query) {
@@ -1655,6 +1731,18 @@ extension TagQuerySortBy on QueryBuilder<Tag, Tag, QSortBy> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QAfterSortBy> sortByImposter() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'imposter', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterSortBy> sortByImposterDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'imposter', Sort.desc);
+    });
+  }
+
   QueryBuilder<Tag, Tag, QAfterSortBy> sortByInactiveColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inactiveColor', Sort.asc);
@@ -1825,6 +1913,18 @@ extension TagQuerySortThenBy on QueryBuilder<Tag, Tag, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QAfterSortBy> thenByImposter() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'imposter', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterSortBy> thenByImposterDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'imposter', Sort.desc);
+    });
+  }
+
   QueryBuilder<Tag, Tag, QAfterSortBy> thenByInactiveColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'inactiveColor', Sort.asc);
@@ -1972,6 +2072,12 @@ extension TagQueryWhereDistinct on QueryBuilder<Tag, Tag, QDistinct> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QDistinct> distinctByImposter() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'imposter');
+    });
+  }
+
   QueryBuilder<Tag, Tag, QDistinct> distinctByInactiveColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'inactiveColor');
@@ -2079,6 +2185,12 @@ extension TagQueryProperty on QueryBuilder<Tag, Tag, QQueryProperty> {
       ignorePcPerformanceRatingsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ignorePcPerformanceRatings');
+    });
+  }
+
+  QueryBuilder<Tag, FilterByImposter, QQueryOperations> imposterProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'imposter');
     });
   }
 

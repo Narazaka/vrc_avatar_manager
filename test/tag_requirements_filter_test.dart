@@ -151,4 +151,37 @@ void main() {
     expect(run(withBounds('fileSize', max: 50)), ['pc', 'cross', 'imp']);
     expect(run(withBounds('fileSize', max: 49)), ['cross', 'imp']);
   });
+
+  test('android side uses android analysis and bool bounds', () {
+    final analysis = FileAnalysis.fromJson(validFileAnalysisJson());
+    expect(analysis.avatarStats.customExpressions, isTrue);
+    final context = TagFilterContext(
+        allTags: [],
+        allAvatars: all,
+        analysisOf: (id, platform) =>
+            id == cross.id && platform == 'android' ? analysis : null);
+    Tag withAndroid(String stat,
+            {double? min,
+            double? max,
+            List<PerformanceRatings> ignore = const []}) =>
+        filter()
+          ..statRequirements = [
+            StatRequirement()
+              ..stat = stat
+              ..minAndroid = min
+              ..maxAndroid = max
+              ..ignoreAndroid = ignore.toList()
+          ];
+    List<String> run(Tag tag) =>
+        tag.filterAvatars(all, context: context).map((a) => a.name).toList();
+    expect(
+        run(withAndroid('customExpressions', min: 1)), ['pc', 'cross', 'imp']);
+    expect(run(withAndroid('customExpressions', max: 0)), ['pc', 'imp']);
+    expect(
+        run(withAndroid('totalPolygons',
+            ignore: [PerformanceRatings.veryPoor])),
+        ['pc', 'imp']);
+    expect(run(withAndroid('totalPolygons', ignore: [PerformanceRatings.poor])),
+        ['pc', 'cross', 'imp']);
+  });
 }

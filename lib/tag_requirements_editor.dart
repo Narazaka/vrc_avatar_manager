@@ -64,7 +64,8 @@ class _TagRequirementsEditorState extends State<TagRequirementsEditor> {
               const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         ),
         onChanged: (v) {
-          onChanged(double.tryParse(v));
+          final d = double.tryParse(v);
+          onChanged(d != null && d.isFinite ? d : null);
           this.onChanged();
         },
       ),
@@ -166,7 +167,17 @@ class _TagRequirementsEditorState extends State<TagRequirementsEditor> {
                 ],
               ],
               onChanged: (v) {
-                req.stat = v!;
+                setState(() {
+                  req
+                    ..stat = v!
+                    ..ignorePc = []
+                    ..ignoreAndroid = []
+                    ..minPc = null
+                    ..maxPc = null
+                    ..minAndroid = null
+                    ..maxAndroid = null;
+                  _numericShown.remove(req);
+                });
                 onChanged();
               },
             ),

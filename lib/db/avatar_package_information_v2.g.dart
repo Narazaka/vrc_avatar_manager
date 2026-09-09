@@ -18,28 +18,33 @@ const AvatarPackageInformationV2Schema = CollectionSchema(
   name: r'AvatarPackageInformationV2',
   id: 5480483663825639723,
   properties: {
-    r'avatarId': PropertySchema(
+    r'analysisJson': PropertySchema(
       id: 0,
+      name: r'analysisJson',
+      type: IsarType.string,
+    ),
+    r'avatarId': PropertySchema(
+      id: 1,
       name: r'avatarId',
       type: IsarType.string,
     ),
     r'platform': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'platform',
       type: IsarType.string,
     ),
     r'size': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'size',
       type: IsarType.long,
     ),
     r'unityPackageId': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'unityPackageId',
       type: IsarType.string,
     ),
     r'version': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'version',
       type: IsarType.long,
     )
@@ -83,6 +88,12 @@ int _avatarPackageInformationV2EstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.analysisJson;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.avatarId.length * 3;
   bytesCount += 3 + object.platform.length * 3;
   bytesCount += 3 + object.unityPackageId.length * 3;
@@ -95,11 +106,12 @@ void _avatarPackageInformationV2Serialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.avatarId);
-  writer.writeString(offsets[1], object.platform);
-  writer.writeLong(offsets[2], object.size);
-  writer.writeString(offsets[3], object.unityPackageId);
-  writer.writeLong(offsets[4], object.version);
+  writer.writeString(offsets[0], object.analysisJson);
+  writer.writeString(offsets[1], object.avatarId);
+  writer.writeString(offsets[2], object.platform);
+  writer.writeLong(offsets[3], object.size);
+  writer.writeString(offsets[4], object.unityPackageId);
+  writer.writeLong(offsets[5], object.version);
 }
 
 AvatarPackageInformationV2 _avatarPackageInformationV2Deserialize(
@@ -109,12 +121,13 @@ AvatarPackageInformationV2 _avatarPackageInformationV2Deserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AvatarPackageInformationV2();
-  object.avatarId = reader.readString(offsets[0]);
+  object.analysisJson = reader.readStringOrNull(offsets[0]);
+  object.avatarId = reader.readString(offsets[1]);
   object.id = id;
-  object.platform = reader.readString(offsets[1]);
-  object.size = reader.readLong(offsets[2]);
-  object.unityPackageId = reader.readString(offsets[3]);
-  object.version = reader.readLong(offsets[4]);
+  object.platform = reader.readString(offsets[2]);
+  object.size = reader.readLong(offsets[3]);
+  object.unityPackageId = reader.readString(offsets[4]);
+  object.version = reader.readLong(offsets[5]);
   return object;
 }
 
@@ -126,14 +139,16 @@ P _avatarPackageInformationV2DeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readLong(offset)) as P;
-    case 3:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readLong(offset)) as P;
     case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -423,6 +438,162 @@ extension AvatarPackageInformationV2QueryWhere on QueryBuilder<
 
 extension AvatarPackageInformationV2QueryFilter on QueryBuilder<
     AvatarPackageInformationV2, AvatarPackageInformationV2, QFilterCondition> {
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'analysisJson',
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'analysisJson',
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'analysisJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+          QAfterFilterCondition>
+      analysisJsonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'analysisJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+          QAfterFilterCondition>
+      analysisJsonMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'analysisJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'analysisJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterFilterCondition> analysisJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'analysisJson',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
       QAfterFilterCondition> avatarIdEqualTo(
     String value, {
@@ -1015,6 +1186,20 @@ extension AvatarPackageInformationV2QueryLinks on QueryBuilder<
 extension AvatarPackageInformationV2QuerySortBy on QueryBuilder<
     AvatarPackageInformationV2, AvatarPackageInformationV2, QSortBy> {
   QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterSortBy> sortByAnalysisJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'analysisJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterSortBy> sortByAnalysisJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'analysisJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
       QAfterSortBy> sortByAvatarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'avatarId', Sort.asc);
@@ -1087,6 +1272,20 @@ extension AvatarPackageInformationV2QuerySortBy on QueryBuilder<
 
 extension AvatarPackageInformationV2QuerySortThenBy on QueryBuilder<
     AvatarPackageInformationV2, AvatarPackageInformationV2, QSortThenBy> {
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterSortBy> thenByAnalysisJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'analysisJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QAfterSortBy> thenByAnalysisJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'analysisJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
       QAfterSortBy> thenByAvatarId() {
     return QueryBuilder.apply(this, (query) {
@@ -1175,6 +1374,13 @@ extension AvatarPackageInformationV2QuerySortThenBy on QueryBuilder<
 extension AvatarPackageInformationV2QueryWhereDistinct on QueryBuilder<
     AvatarPackageInformationV2, AvatarPackageInformationV2, QDistinct> {
   QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
+      QDistinct> distinctByAnalysisJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'analysisJson', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, AvatarPackageInformationV2,
       QDistinct> distinctByAvatarId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'avatarId', caseSensitive: caseSensitive);
@@ -1216,6 +1422,13 @@ extension AvatarPackageInformationV2QueryProperty on QueryBuilder<
   QueryBuilder<AvatarPackageInformationV2, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AvatarPackageInformationV2, String?, QQueryOperations>
+      analysisJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'analysisJson');
     });
   }
 

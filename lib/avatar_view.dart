@@ -40,6 +40,7 @@ class AvatarView extends StatelessWidget {
     this.showHaveImposter = true,
     this.showNotHaveImposter = true,
     this.showTags = true,
+    this.statsFooter,
     this.api,
   });
 
@@ -51,6 +52,8 @@ class AvatarView extends StatelessWidget {
   final bool showHaveImposter;
   final bool showNotHaveImposter;
   final bool showTags;
+
+  final Widget? statsFooter;
   final VrcApi? api;
 
   static Image performanceIcon(PerformanceRatings p) {
@@ -91,7 +94,8 @@ class AvatarView extends StatelessWidget {
         height: 220 +
             (detailed ? 70 : 0) +
             (showTags ? 20 : 0) +
-            (detailed && api != null ? 40 : 0),
+            (detailed && api != null ? 40 : 0) +
+            (statsFooter != null ? 20 : 0),
         color: selected ? Colors.green : null,
         child: Column(children: [
           if (avatar.releaseStatus == ReleaseStatus.public)
@@ -144,6 +148,7 @@ class AvatarView extends StatelessWidget {
                 ),
             ],
           ),
+          if (statsFooter != null) statsFooter!,
           if (showTags)
             Row(
               children: [

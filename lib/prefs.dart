@@ -22,6 +22,7 @@ const _fetchAvatarSize = "fetchAvatarSize";
 const _showHaveImposter = "showHaveImposter";
 const _showNotHaveImposter = "showNotHaveImposter";
 const _showTags = "showTags";
+const _showAvatarAnalysis = "showAvatarAnalysis";
 
 class Prefs {
   static Prefs? _instance;
@@ -145,6 +146,14 @@ class Prefs {
 
   Future<void> setUseOsc(bool value) async {
     await _prefs.setBool(_useOsc, value);
+  }
+
+  Future<bool> get showAvatarAnalysis async {
+    return _prefs.getBool(_showAvatarAnalysis) ?? false;
+  }
+
+  Future<void> setShowAvatarAnalysis(bool value) async {
+    await _prefs.setBool(_showAvatarAnalysis, value);
   }
 
   Future<bool> get selectSingleTag async {

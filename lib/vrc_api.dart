@@ -113,6 +113,33 @@ class VrcApi {
     return null;
   }
 
+  static final _assetUrlPattern = RegExp(r'/file/([^/]+)/(\d+)');
+
+  Future<FileAnalysis?> fileAnalysis(String assetUrl, String? variant) async {
+    final match = _assetUrlPattern.firstMatch(assetUrl);
+    if (match == null) {
+      print("file analysis error: unparsable assetUrl $assetUrl");
+      return null;
+    }
+    final api = vrchatDart.rawApi.getFilesApi();
+    final fileId = match.group(1)!;
+    final versionId = int.parse(match.group(2)!);
+    final request = switch (variant) {
+      "security" =>
+        api.getFileAnalysisSecurity(fileId: fileId, versionId: versionId),
+      "standard" =>
+        api.getFileAnalysisStandard(fileId: fileId, versionId: versionId),
+      _ => api.getFileAnalysis(fileId: fileId, versionId: versionId),
+    };
+    final (res, err) = await request.validateVrc();
+    if (res != null) {
+      return res.data;
+    }
+    // 解析未完了は 202
+    print("file analysis error: ${err?.response?.statusCode} ${err?.error}");
+    return null;
+  }
+
   Future<int?> fileSize(String url) async {
     final options = Options(
       method: r'GET',

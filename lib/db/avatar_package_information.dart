@@ -1,9 +1,10 @@
 import 'package:isar/isar.dart';
 import 'package:vrc_avatar_manager/db/avatar_package_information_like.dart';
+import 'package:vrchat_dart/vrchat_dart.dart';
 
 part 'avatar_package_information.g.dart';
 
-@Collection(ignore: {"avatarId", "platform"})
+@Collection(ignore: {"avatarId", "platform", "analysis"})
 class AvatarPackageInformation implements AvatarPackageInformationLike {
   @override
   Id id = Isar.autoIncrement;
@@ -20,6 +21,9 @@ class AvatarPackageInformation implements AvatarPackageInformationLike {
   String avatarId = "";
   @override
   String platform = "";
+
+  @override
+  FileAnalysis? get analysis => null;
 
   @override
   String toString() {

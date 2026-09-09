@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vrc_avatar_manager/avatar_analysis_panel.dart';
 import 'package:vrc_avatar_manager/avatar_view.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/clickable_view.dart';
@@ -66,6 +67,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
 
   bool _confirmWhenChangeAvatar = false;
   bool _useOsc = false;
+  bool _showAvatarAnalysis = false;
   bool _ascending = false;
   SortBy _sortBy = SortBy.createdAt;
   bool _editTagAvatars = false;
@@ -338,6 +340,84 @@ class _AvatarsPageState extends State<AvatarsPage> {
     }
   }
 
+  bool _hasAnalysis(String avatarId) {
+    return _avatarPackageInformations[(
+              avatarId: avatarId,
+              platform: AvatarWithStat.platformPc
+            )]
+                ?.analysis !=
+            null ||
+        _avatarPackageInformations[(
+              avatarId: avatarId,
+              platform: AvatarWithStat.platformAndroid
+            )]
+                ?.analysis !=
+            null;
+  }
+
+  Widget _avatarDialogMain(AvatarWithStat avatar, StateSetter setState) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AvatarView(
+          avatar: avatar,
+          detailed: true,
+          pcAvatarPackageInformation: _avatarPackageInformations[(
+            avatarId: avatar.id,
+            platform: AvatarWithStat.platformPc
+          )],
+          androidAvatarPackageInformation: _avatarPackageInformations[(
+            avatarId: avatar.id,
+            platform: AvatarWithStat.platformAndroid
+          )],
+          showHaveImposter: _showHaveImposter,
+          showNotHaveImposter: _showNotHaveImposter,
+          showTags: _showTags,
+          statsFooter: InkWell(
+            onTap: !_hasAnalysis(avatar.id)
+                ? null
+                : () async {
+                    setState(() {
+                      _showAvatarAnalysis = !_showAvatarAnalysis;
+                    });
+                    final prefs = await Prefs.instance;
+                    await prefs.setShowAvatarAnalysis(_showAvatarAnalysis);
+                  },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("パフォーマンス詳細",
+                    style: TextStyle(
+                        fontSize: 11,
+                        color:
+                            _hasAnalysis(avatar.id) ? null : Colors.black38)),
+                Icon(_showAvatarAnalysis ? Icons.arrow_left : Icons.arrow_right,
+                    size: 14,
+                    color: _hasAnalysis(avatar.id) ? null : Colors.black38),
+              ],
+            ),
+          ),
+          api: _api,
+        ),
+        SizedBox(
+            width: 200,
+            child: Tooltip(
+                message: "OSCを使用してアバターをより素早く変更します（VRChat起動時のみ）",
+                child: CheckboxListTile(
+                    title: const Text("OSCを使用"),
+                    contentPadding: EdgeInsets.fromLTRB(5, 0, 5, 0),
+                    value: _useOsc,
+                    onChanged: (value) async {
+                      setState(() {
+                        _useOsc = value ?? false;
+                      });
+                      final prefs = await Prefs.instance;
+                      await prefs.setUseOsc(_useOsc);
+                    }))),
+      ],
+    );
+  }
+
   Future<void> _changeAvatar(String id) async {
     if (_confirmWhenChangeAvatar) {
       var avatar = _avatars.firstWhereOrNull((avatar) => avatar.id == id);
@@ -350,46 +430,30 @@ class _AvatarsPageState extends State<AvatarsPage> {
                 title: const Text("アバター変更"),
                 content: avatar == null
                     ? const Text("?")
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AvatarView(
-                            avatar: avatar,
-                            detailed: true,
-                            pcAvatarPackageInformation:
-                                _avatarPackageInformations[(
-                              avatarId: avatar.id,
-                              platform: AvatarWithStat.platformPc
-                            )],
-                            androidAvatarPackageInformation:
-                                _avatarPackageInformations[(
-                              avatarId: avatar.id,
-                              platform: AvatarWithStat.platformAndroid
-                            )],
-                            showHaveImposter: _showHaveImposter,
-                            showNotHaveImposter: _showNotHaveImposter,
-                            showTags: _showTags,
-                            api: _api,
+                    : !(_showAvatarAnalysis && _hasAnalysis(avatar.id))
+                        ? _avatarDialogMain(avatar, setState)
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _avatarDialogMain(avatar, setState),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                  child: AvatarAnalysisPanel(
+                                avatar: avatar,
+                                pcAvatarPackageInformation:
+                                    _avatarPackageInformations[(
+                                  avatarId: avatar.id,
+                                  platform: AvatarWithStat.platformPc
+                                )],
+                                androidAvatarPackageInformation:
+                                    _avatarPackageInformations[(
+                                  avatarId: avatar.id,
+                                  platform: AvatarWithStat.platformAndroid
+                                )],
+                              )),
+                            ],
                           ),
-                          SizedBox(
-                              width: 200,
-                              child: Tooltip(
-                                  message:
-                                      "OSCを使用してアバターをより素早く変更します（VRChat起動時のみ）",
-                                  child: CheckboxListTile(
-                                      title: const Text("OSCを使用"),
-                                      contentPadding:
-                                          EdgeInsets.fromLTRB(5, 0, 5, 0),
-                                      value: _useOsc,
-                                      onChanged: (value) async {
-                                        setState(() {
-                                          _useOsc = value ?? false;
-                                        });
-                                        final prefs = await Prefs.instance;
-                                        await prefs.setUseOsc(_useOsc);
-                                      }))),
-                        ],
-                      ),
                 actions: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -459,12 +523,14 @@ class _AvatarsPageState extends State<AvatarsPage> {
   Future<void> _restoreSettingsInDialog() async {
     final prefs = await Prefs.instance;
     var useOsc = await prefs.useOsc;
+    var showAvatarAnalysis = await prefs.showAvatarAnalysis;
     var showHaveImposter = await prefs.showHaveImposter;
     var showNotHaveImposter = await prefs.showNotHaveImposter;
     var showTags = await prefs.showTags;
     var multiLineTagsView = await prefs.multiLineTagsView;
     setState(() {
       _useOsc = useOsc;
+      _showAvatarAnalysis = showAvatarAnalysis;
       _showHaveImposter = showHaveImposter;
       _showNotHaveImposter = showNotHaveImposter;
       _showTags = showTags;
@@ -531,6 +597,9 @@ class _AvatarsPageState extends State<AvatarsPage> {
       }
     };
     for (var ai in _avatarPackageInformations.values) {
+      if (ai.analysis == null) {
+        continue;
+      }
       targets.remove((ai.unityPackageId, ai.version));
     }
     if (targets.isEmpty) {
@@ -569,7 +638,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
       return;
     }
     final stat = AvatarWithStat(avatarDetail);
-    if (!await _fetchMainAvatarSize(
+    if (!await _fetchMainAvatarAnalysis(
         avatarDetail, stat.pc.main, "$errorTarget PC")) {
       setState(() {
         _erroredAvatarPackageInformations
@@ -589,7 +658,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
             .add((avatarId: stat.id, platform: AvatarWithStat.platformPc));
       });
     }
-    if (!await _fetchMainAvatarSize(
+    if (!await _fetchMainAvatarAnalysis(
         avatarDetail, stat.android.main, "$errorTarget Android")) {
       setState(() {
         _erroredAvatarPackageInformations
@@ -614,21 +683,22 @@ class _AvatarsPageState extends State<AvatarsPage> {
     });
   }
 
-  Future<bool> _fetchMainAvatarSize(
+  Future<bool> _fetchMainAvatarAnalysis(
       Avatar avatar, UnityPackage? up, String errorTarget) async {
     if (up == null) {
       return true;
     }
     if (up.assetUrl == null) {
-      print("[_fetchMainAvatarSize][$errorTarget] assetUrl empty");
+      print("[_fetchMainAvatarAnalysis][$errorTarget] assetUrl empty");
       return true;
     }
     final stopwatch = Stopwatch()..start();
-    final size = await _api.fileSize(up.assetUrl!);
+    final analysis = await _api.fileAnalysis(up.assetUrl!, up.variant);
     stopwatch.stop();
-    print("[_fetchMainAvatarSize] api.fileSize ${stopwatch.elapsed}");
+    print("[_fetchMainAvatarAnalysis] api.fileAnalysis ${stopwatch.elapsed}");
+    final size = analysis?.fileSize ?? await _api.fileSize(up.assetUrl!);
     if (size == null) {
-      print("[_fetchMainAvatarSize][$errorTarget] Failed to get size");
+      print("[_fetchMainAvatarAnalysis][$errorTarget] Failed to get size");
       print(up);
       return false;
     }
@@ -637,7 +707,8 @@ class _AvatarsPageState extends State<AvatarsPage> {
       ..platform = up.platform
       ..unityPackageId = up.id
       ..version = avatar.version
-      ..size = size;
+      ..size = size
+      ..analysis = analysis;
     await _avatarPackageInformationDb.put(ap);
     setState(() {
       _avatarPackageInformations[(
@@ -645,7 +716,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
         platform: ap.platform
       )] = ap;
     });
-    return true;
+    return analysis != null;
   }
 
   void _showInfo(String message) {

@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:vrchat_dart/vrchat_dart.dart';
 
 abstract class AvatarPackageInformationLike {
   late Id id;
@@ -8,4 +9,7 @@ abstract class AvatarPackageInformationLike {
   late String unityPackageId;
   late int version;
   late int size;
+
+  @ignore
+  FileAnalysis? get analysis;
 }

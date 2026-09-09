@@ -1074,42 +1074,44 @@ class _AvatarsPageState extends State<AvatarsPage> {
                       ],
                     )),
               ),
-              body: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: filteredAvatars
-                        .map((avatar) => ClickableView(
-                              key: Key(avatar.id),
-                              child: AvatarView(
-                                avatar: avatar,
-                                pcAvatarPackageInformation:
-                                    _avatarPackageInformations[(
-                                  avatarId: avatar.id,
-                                  platform: AvatarWithStat.platformPc
-                                )],
-                                androidAvatarPackageInformation:
-                                    _avatarPackageInformations[(
-                                  avatarId: avatar.id,
-                                  platform: AvatarWithStat.platformAndroid
-                                )],
-                                selected: _editTagAvatarTag != null &&
-                                    _editTagAvatarTag!.avatarIds
-                                        .contains(avatar.id),
-                                showHaveImposter: _showHaveImposter,
-                                showNotHaveImposter: _showNotHaveImposter,
-                                showTags: _showTags,
-                              ),
-                              onTap: () => _editTagAvatarTag == null
-                                  ? _changeAvatar(avatar.id)
-                                  : _toggleTagAvatar(avatar.id),
-                            ))
-                        .toList(),
-                  ),
+              body: GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 208,
+                  mainAxisExtent: 220 + (_showTags ? 20 : 0),
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
                 ),
+                itemCount: filteredAvatars.length,
+                itemBuilder: (context, index) {
+                  final avatar = filteredAvatars[index];
+                  return Align(
+                      alignment: Alignment.topLeft,
+                      child: ClickableView(
+                        key: Key(avatar.id),
+                        child: AvatarView(
+                          avatar: avatar,
+                          pcAvatarPackageInformation:
+                              _avatarPackageInformations[(
+                            avatarId: avatar.id,
+                            platform: AvatarWithStat.platformPc
+                          )],
+                          androidAvatarPackageInformation:
+                              _avatarPackageInformations[(
+                            avatarId: avatar.id,
+                            platform: AvatarWithStat.platformAndroid
+                          )],
+                          selected: _editTagAvatarTag != null &&
+                              _editTagAvatarTag!.avatarIds.contains(avatar.id),
+                          showHaveImposter: _showHaveImposter,
+                          showNotHaveImposter: _showNotHaveImposter,
+                          showTags: _showTags,
+                        ),
+                        onTap: () => _editTagAvatarTag == null
+                            ? _changeAvatar(avatar.id)
+                            : _toggleTagAvatar(avatar.id),
+                      ));
+                },
               ),
             )));
   }

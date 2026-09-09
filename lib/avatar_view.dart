@@ -75,12 +75,15 @@ class AvatarView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
     final image = SizedBox(
         width: 200,
         height: 150,
         child: CachedNetworkImage(
           imageUrl: avatar.thumbnailImageUrl ?? "",
           httpHeaders: {"user-agent": VrcApi.userAgentString},
+          memCacheWidth: (200 * dpr).round(),
+          memCacheHeight: (150 * dpr).round(),
           fadeOutDuration: const Duration(milliseconds: 200),
           fadeInDuration: const Duration(milliseconds: 200),
           errorWidget: (context, url, error) {

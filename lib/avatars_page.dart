@@ -91,6 +91,7 @@ class _AvatarsPageState extends State<AvatarsPage> {
 
   bool get _hasDetailConditions =>
       _filterTag.conditionGroups.isNotEmpty ||
+      _filterTag.statRequirements.isNotEmpty ||
       _searchTag.type != TagType.simple ||
       _searchTag.target != TagTarget.name ||
       _searchTag.invert ||
@@ -754,7 +755,12 @@ class _AvatarsPageState extends State<AvatarsPage> {
 
   Iterable<AvatarWithStat> get _filteredAvatars {
     Iterable<AvatarWithStat> avatars = _sortedAvatars;
-    final context = TagFilterContext(allTags: _tags, allAvatars: _sortedAvatars);
+    final context = TagFilterContext(
+        allTags: _tags,
+        allAvatars: _sortedAvatars,
+        analysisOf: (avatarId, platform) =>
+            _avatarPackageInformations[(avatarId: avatarId, platform: platform)]
+                ?.analysis);
     for (var tag in _selectedTags) {
       avatars = tag.filterAvatars(avatars, context: context);
     }
@@ -890,8 +896,8 @@ class _AvatarsPageState extends State<AvatarsPage> {
         message: "詳細検索",
         child: (_hasDetailConditions ? IconButton.filled : IconButton.new)(
           icon: const Icon(Icons.manage_search),
-          onPressed: () => SearchConditionDialog.show(
-              context, _searchTag, _filterTag, _tags, () => setState(() {})),
+          onPressed: () => SearchConditionDialog.show(context, _searchTag,
+              _searchController, _filterTag, _tags, () => setState(() {})),
         ),
       ),
       const SizedBox(width: 8),

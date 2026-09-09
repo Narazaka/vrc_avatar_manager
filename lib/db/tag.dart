@@ -4,6 +4,7 @@ import 'package:isar/isar.dart';
 import 'package:vrc_avatar_manager/avatar_with_stat.dart';
 import 'package:vrc_avatar_manager/db/condition_combinator.dart';
 import 'package:vrc_avatar_manager/db/condition_match_type.dart';
+import 'package:vrc_avatar_manager/db/stat_requirement.dart';
 import 'package:vrc_avatar_manager/db/tag_avatar.dart';
 import 'package:vrc_avatar_manager/db/tag_condition.dart';
 import 'package:vrc_avatar_manager/db/tag_condition_group.dart';
@@ -13,6 +14,7 @@ import 'package:vrc_avatar_manager/db/tag_type.dart';
 import 'package:collection/collection.dart';
 import 'package:vrc_avatar_manager/db/tags_db.dart';
 import 'package:vrc_avatar_manager/imposter.dart';
+import 'package:vrc_avatar_manager/performance_stats.dart';
 import 'package:vrchat_dart/vrchat_dart.dart';
 
 part 'tag.g.dart';
@@ -50,11 +52,14 @@ class Tag {
   @enumerated
   FilterByImposter imposter = FilterByImposter.none;
 
+  List<StatRequirement> statRequirements = [];
+
   @ignore
   bool get hasRequirements =>
       hasPlatformRequirements ||
       hasPerformanceRequirements ||
-      imposter != FilterByImposter.none;
+      imposter != FilterByImposter.none ||
+      statRequirements.isNotEmpty;
 
   late String name;
 
@@ -116,6 +121,7 @@ class Tag {
     ignorePcPerformanceRatings = [];
     ignoreAndroidPerformanceRatings = [];
     imposter = FilterByImposter.none;
+    statRequirements = [];
   }
 
   void copyRequirementsFrom(Tag other) {
@@ -125,6 +131,7 @@ class Tag {
     ignoreAndroidPerformanceRatings =
         other.ignoreAndroidPerformanceRatings.toList();
     imposter = other.imposter;
+    statRequirements = other.statRequirements.map((r) => r.copy()).toList();
   }
 
   Future<void> toggleAvatar(String avatarId, TagsDb tagsDb) async {
@@ -156,13 +163,14 @@ class Tag {
     await tagsDb.putLinkedAll(this, targetTagAvatars);
   }
 
-  Iterable<AvatarWithStat> filterAvatars(Iterable<AvatarWithStat> avatars, {TagFilterContext? context}) {
+  Iterable<AvatarWithStat> filterAvatars(Iterable<AvatarWithStat> avatars,
+      {TagFilterContext? context}) {
     switch (type) {
       case TagType.items:
         var ids = avatarIds;
         return avatars.where((avatar) => ids.contains(avatar.id));
       case TagType.simple:
-        final requirementsFilter = _genRequirementsFilter();
+        final requirementsFilter = _genRequirementsFilter(context);
         avatars = avatars.where(requirementsFilter);
         if (search.isEmpty) {
           return avatars;
@@ -171,7 +179,7 @@ class Tag {
         var matches = _genSimpleFilter();
         return avatars.where((avatar) => pick(avatar).any(matches));
       case TagType.regexp:
-        final requirementsFilter = _genRequirementsFilter();
+        final requirementsFilter = _genRequirementsFilter(context);
         avatars = avatars.where(requirementsFilter);
         if (search.isEmpty) {
           return avatars;
@@ -180,7 +188,7 @@ class Tag {
         var matches = _genRegexpFilter();
         return avatars.where((avatar) => pick(avatar).any(matches));
       case TagType.wildcard:
-        final requirementsFilter = _genRequirementsFilter();
+        final requirementsFilter = _genRequirementsFilter(context);
         avatars = avatars.where(requirementsFilter);
         if (search.isEmpty) {
           return avatars;
@@ -189,7 +197,7 @@ class Tag {
         var matches = _genWildcardFilter();
         return avatars.where((avatar) => pick(avatar).any(matches));
       case TagType.conditions:
-        final requirementsFilter = _genRequirementsFilter();
+        final requirementsFilter = _genRequirementsFilter(context);
         avatars = avatars.where(requirementsFilter);
         if (conditionGroups.isEmpty) return avatars;
         return avatars.where((avatar) => _matchesConditions(avatar, context));
@@ -241,10 +249,18 @@ class Tag {
     }
   }
 
-  bool Function(AvatarWithStat) _genRequirementsFilter() {
+  bool Function(AvatarWithStat) _genRequirementsFilter(
+      TagFilterContext? context) {
     final ignorePc = ignorePcPerformanceRatings.toSet();
     final ignoreAndroid = ignoreAndroidPerformanceRatings.toSet();
     final filters = <bool Function(AvatarWithStat)>[
+      if (context != null)
+        for (final req in statRequirements) ...[
+          _genStatFilter(
+              context, req.stat, req.ignorePc, req.minPc, req.maxPc, true),
+          _genStatFilter(context, req.stat, req.ignoreAndroid, req.minAndroid,
+              req.maxAndroid, false),
+        ],
       if (requirePc && requireAndroid)
         (avatar) => avatar.hasCrossPlatform
       else if (requirePc)
@@ -267,30 +283,62 @@ class Tag {
     return (avatar) => filters.every((f) => f(avatar));
   }
 
+  static bool Function(AvatarWithStat) _genStatFilter(
+      TagFilterContext context,
+      String statKey,
+      List<PerformanceRatings> ignore,
+      double? min,
+      double? max,
+      bool isPc) {
+    final stat = performanceStatByKey(statKey);
+    if (stat == null || (ignore.isEmpty && min == null && max == null)) {
+      return (avatar) => true;
+    }
+    final platform =
+        isPc ? AvatarWithStat.platformPc : AvatarWithStat.platformAndroid;
+    final ignoreSet = ignore.toSet();
+    final metric = stat.metric;
+    return (avatar) {
+      final analysis = context.analysisOf(avatar.id, platform);
+      if (analysis == null) return true;
+      if (ignoreSet.contains(stat.rating(analysis, isPc))) return false;
+      if (metric == null) return true;
+      final value = metric(analysis) / stat.scale;
+      return (min == null || value >= min) && (max == null || value <= max);
+    };
+  }
+
   // --- conditions matching ---
 
   bool _matchesConditions(AvatarWithStat avatar, TagFilterContext? context) {
     switch (groupCombinator) {
       case ConditionCombinator.and:
         // CNF: all groups must pass, within each group any condition passes (OR)
-        return conditionGroups.every((group) => _matchesGroupOr(avatar, group, context));
+        return conditionGroups
+            .every((group) => _matchesGroupOr(avatar, group, context));
       case ConditionCombinator.or:
         // DNF: any group must pass, within each group all conditions pass (AND)
-        return conditionGroups.any((group) => _matchesGroupAnd(avatar, group, context));
+        return conditionGroups
+            .any((group) => _matchesGroupAnd(avatar, group, context));
     }
   }
 
-  bool _matchesGroupOr(AvatarWithStat avatar, TagConditionGroup group, TagFilterContext? context) {
+  bool _matchesGroupOr(AvatarWithStat avatar, TagConditionGroup group,
+      TagFilterContext? context) {
     if (group.conditions.isEmpty) return true;
-    return group.conditions.any((cond) => _matchesCondition(avatar, cond, context));
+    return group.conditions
+        .any((cond) => _matchesCondition(avatar, cond, context));
   }
 
-  bool _matchesGroupAnd(AvatarWithStat avatar, TagConditionGroup group, TagFilterContext? context) {
+  bool _matchesGroupAnd(AvatarWithStat avatar, TagConditionGroup group,
+      TagFilterContext? context) {
     if (group.conditions.isEmpty) return true;
-    return group.conditions.every((cond) => _matchesCondition(avatar, cond, context));
+    return group.conditions
+        .every((cond) => _matchesCondition(avatar, cond, context));
   }
 
-  bool _matchesCondition(AvatarWithStat avatar, TagCondition cond, TagFilterContext? context) {
+  bool _matchesCondition(
+      AvatarWithStat avatar, TagCondition cond, TagFilterContext? context) {
     if (cond.matchType == ConditionMatchType.matchesTag) {
       final tagId = int.tryParse(cond.search);
       if (tagId == null || context == null) return cond.invert;
@@ -305,10 +353,14 @@ class Tag {
       TagTarget.nameOrDescription => [avatar.name, avatar.avatar.description],
     };
     final filter = switch (cond.matchType) {
-      ConditionMatchType.contains => _conditionStringFilter(cond, (s, q) => s.contains(q)),
-      ConditionMatchType.startsWith => _conditionStringFilter(cond, (s, q) => s.startsWith(q)),
-      ConditionMatchType.endsWith => _conditionStringFilter(cond, (s, q) => s.endsWith(q)),
-      ConditionMatchType.exact => _conditionStringFilter(cond, (s, q) => s == q),
+      ConditionMatchType.contains =>
+        _conditionStringFilter(cond, (s, q) => s.contains(q)),
+      ConditionMatchType.startsWith =>
+        _conditionStringFilter(cond, (s, q) => s.startsWith(q)),
+      ConditionMatchType.endsWith =>
+        _conditionStringFilter(cond, (s, q) => s.endsWith(q)),
+      ConditionMatchType.exact =>
+        _conditionStringFilter(cond, (s, q) => s == q),
       ConditionMatchType.wildcard => _conditionWildcardFilter(cond),
       ConditionMatchType.regexp => _conditionRegexpFilter(cond),
       ConditionMatchType.matchesTag => throw StateError('unreachable'),

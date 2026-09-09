@@ -10,21 +10,29 @@ class SearchConditionDialog extends StatefulWidget {
   const SearchConditionDialog(
       {super.key,
       required this.searchTag,
+      required this.searchController,
       required this.filterTag,
       required this.allTags,
       required this.onChanged});
 
   final Tag searchTag;
+  final TextEditingController searchController;
   final Tag filterTag;
   final List<Tag> allTags;
   final VoidCallback onChanged;
 
-  static Future<void> show(BuildContext context, Tag searchTag, Tag filterTag,
-      List<Tag> allTags, VoidCallback onChanged) {
+  static Future<void> show(
+      BuildContext context,
+      Tag searchTag,
+      TextEditingController searchController,
+      Tag filterTag,
+      List<Tag> allTags,
+      VoidCallback onChanged) {
     return showDialog(
       context: context,
       builder: (context) => SearchConditionDialog(
           searchTag: searchTag,
+          searchController: searchController,
           filterTag: filterTag,
           allTags: allTags,
           onChanged: onChanged),
@@ -49,9 +57,10 @@ class _SearchConditionDialogState extends State<SearchConditionDialog> {
       insetPadding: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
       content: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text('検索欄', style: Theme.of(context).textTheme.titleSmall),
+          TextField(
+            controller: widget.searchController,
+            decoration: const InputDecoration(labelText: '検索文字列'),
+            onChanged: (v) => _changed(() => widget.searchTag.search = v),
           ),
           TagSearchOptionsEditor(tag: widget.searchTag, onChanged: _changed),
           const Divider(),

@@ -97,14 +97,20 @@ const TagSchema = CollectionSchema(
       name: r'search',
       type: IsarType.string,
     ),
-    r'target': PropertySchema(
+    r'statRequirements': PropertySchema(
       id: 15,
+      name: r'statRequirements',
+      type: IsarType.objectList,
+      target: r'StatRequirement',
+    ),
+    r'target': PropertySchema(
+      id: 16,
       name: r'target',
       type: IsarType.byte,
       enumMap: _TagtargetEnumValueMap,
     ),
     r'type': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TagtypeEnumValueMap,
@@ -126,6 +132,7 @@ const TagSchema = CollectionSchema(
     )
   },
   embeddedSchemas: {
+    r'StatRequirement': StatRequirementSchema,
     r'TagConditionGroup': TagConditionGroupSchema,
     r'TagCondition': TagConditionSchema
   },
@@ -154,6 +161,15 @@ int _tagEstimateSize(
   bytesCount += 3 + object.ignorePcPerformanceRatings.length;
   bytesCount += 3 + object.name.length * 3;
   bytesCount += 3 + object.search.length * 3;
+  bytesCount += 3 + object.statRequirements.length * 3;
+  {
+    final offsets = allOffsets[StatRequirement]!;
+    for (var i = 0; i < object.statRequirements.length; i++) {
+      final value = object.statRequirements[i];
+      bytesCount +=
+          StatRequirementSchema.estimateSize(value, offsets, allOffsets);
+    }
+  }
   return bytesCount;
 }
 
@@ -185,8 +201,14 @@ void _tagSerialize(
   writer.writeBool(offsets[12], object.requireAndroid);
   writer.writeBool(offsets[13], object.requirePc);
   writer.writeString(offsets[14], object.search);
-  writer.writeByte(offsets[15], object.target.index);
-  writer.writeByte(offsets[16], object.type.index);
+  writer.writeObjectList<StatRequirement>(
+    offsets[15],
+    allOffsets,
+    StatRequirementSchema.serialize,
+    object.statRequirements,
+  );
+  writer.writeByte(offsets[16], object.target.index);
+  writer.writeByte(offsets[17], object.type.index);
 }
 
 Tag _tagDeserialize(
@@ -234,10 +256,17 @@ Tag _tagDeserialize(
   object.requireAndroid = reader.readBool(offsets[12]);
   object.requirePc = reader.readBool(offsets[13]);
   object.search = reader.readString(offsets[14]);
-  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[15])] ??
+  object.statRequirements = reader.readObjectList<StatRequirement>(
+        offsets[15],
+        StatRequirementSchema.deserialize,
+        allOffsets,
+        StatRequirement(),
+      ) ??
+      [];
+  object.target = _TagtargetValueEnumMap[reader.readByteOrNull(offsets[16])] ??
       TagTarget.name;
   object.type =
-      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[16])] ?? TagType.items;
+      _TagtypeValueEnumMap[reader.readByteOrNull(offsets[17])] ?? TagType.items;
   return object;
 }
 
@@ -299,9 +328,17 @@ P _tagDeserializeProp<P>(
     case 14:
       return (reader.readString(offset)) as P;
     case 15:
+      return (reader.readObjectList<StatRequirement>(
+            offset,
+            StatRequirementSchema.deserialize,
+            allOffsets,
+            StatRequirement(),
+          ) ??
+          []) as P;
+    case 16:
       return (_TagtargetValueEnumMap[reader.readByteOrNull(offset)] ??
           TagTarget.name) as P;
-    case 16:
+    case 17:
       return (_TagtypeValueEnumMap[reader.readByteOrNull(offset)] ??
           TagType.items) as P;
     default:
@@ -1510,6 +1547,91 @@ extension TagQueryFilter on QueryBuilder<Tag, Tag, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition>
+      statRequirementsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'statRequirements',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<Tag, Tag, QAfterFilterCondition> targetEqualTo(TagTarget value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1620,6 +1742,13 @@ extension TagQueryObject on QueryBuilder<Tag, Tag, QFilterCondition> {
       FilterQuery<TagConditionGroup> q) {
     return QueryBuilder.apply(this, (query) {
       return query.object(q, r'conditionGroups');
+    });
+  }
+
+  QueryBuilder<Tag, Tag, QAfterFilterCondition> statRequirementsElement(
+      FilterQuery<StatRequirement> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.object(q, r'statRequirements');
     });
   }
 }
@@ -2233,6 +2362,13 @@ extension TagQueryProperty on QueryBuilder<Tag, Tag, QQueryProperty> {
   QueryBuilder<Tag, String, QQueryOperations> searchProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'search');
+    });
+  }
+
+  QueryBuilder<Tag, List<StatRequirement>, QQueryOperations>
+      statRequirementsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'statRequirements');
     });
   }
 
